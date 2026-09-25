@@ -1,11 +1,11 @@
 {
-  "name": "Oui-Si Quest : Escape Game LEA Valence",
-  "short_name": "Oui-Si Quest",
-  "description": "Escape game pédagogique pour les étudiants L1 LEA Oui-Si de l'Université Grenoble Alpes (Valence)",
+  "name": "Oui-Si Quest : Le Grimoire de Valence",
+  "short_name": "Grimoire Oui-Si",
+  "description": "Escape game médiéval fantastique pour les initiés L1 LEA Oui-Si de l'Université Grenoble Alpes (Valence)",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#4f46e5",
+  "background_color": "#0c0d12",
+  "theme_color": "#b45309",
   "orientation": "portrait-primary",
   "categories": ["education", "games"],
   "icons": [
