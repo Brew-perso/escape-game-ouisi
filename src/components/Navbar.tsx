@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, GraduationCap, Compass, Trophy, MapPin, RotateCcw } from 'lucide-react';
+import { Volume2, VolumeX, GraduationCap, Compass, Shield, RotateCcw } from 'lucide-react';
 import type { CourseSession, GameProgress } from '../types';
 import { sounds } from '../utils/audio';
 
@@ -30,50 +30,50 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const stages = [
-    { num: 1, label: 'Mindset & YET' },
-    { num: 2, label: 'Outils' },
-    { num: 3, label: 'Rythme & Stress' },
-    { num: 4, label: 'Micro' },
-    { num: 5, label: 'Coffre' },
+    { num: 1, label: 'Sceau 1 : YET' },
+    { num: 2, label: 'Sceau 2 : Outils' },
+    { num: 3, label: 'Sceau 3 : Rythme' },
+    { num: 4, label: 'Sceau 4 : Verbe' },
+    { num: 5, label: 'Reliquaire' },
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-indigo-500/20 px-4 py-2.5">
+    <header className="sticky top-0 z-40 bg-stone-950/90 backdrop-blur-md border-b border-amber-600/30 px-4 py-2.5 shadow-xl">
       <div className="max-w-4xl mx-auto flex flex-col gap-2">
         {/* Top line: Brand + Controls */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md font-black text-sm">
-              LEA
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-950 border border-amber-500/50 flex items-center justify-center text-amber-400 shadow-md font-serif font-black text-sm">
+              <Shield className="w-4 h-4 text-amber-400" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-300">
-                  Oui-Si Quest
+              <div className="flex items-center gap-1.5 font-serif">
+                <span className="text-xs font-bold tracking-wider uppercase text-amber-200">
+                  Guilde Oui-Si
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30 flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5" /> Valence
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 font-serif border border-amber-500/30">
+                  Valence
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 truncate max-w-[180px] sm:max-w-xs font-medium">
+              <p className="text-[11px] text-stone-400 font-serif truncate max-w-[180px] sm:max-w-xs">
                 {course.title}
               </p>
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Score pill */}
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold font-mono">
-              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-bold font-mono">
+              <Shield className="w-3.5 h-3.5 text-amber-400" />
               <span>{progress.score}</span>
             </div>
 
             {/* Change course */}
             <button
               onClick={onOpenCourseSelector}
-              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500 text-slate-300 hover:text-white transition"
-              title="Changer de cours"
+              className="p-1.5 rounded-xl bg-stone-900 border border-stone-800 hover:border-amber-500 text-stone-300 hover:text-white transition"
+              title="Changer de quête"
             >
               <Compass className="w-4 h-4" />
             </button>
@@ -86,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 sounds.setPreferredAccent(nextAccent);
                 sounds.speakEnglish(nextAccent === 'en-GB' ? 'British English' : 'American English');
               }}
-              className="px-2 py-1 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-400 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1 shadow-sm"
+              className="px-2 py-1 rounded-xl bg-stone-900 border border-stone-800 hover:border-amber-400 text-xs font-serif font-bold text-amber-200 hover:text-white transition flex items-center gap-1 shadow-sm"
               title={`Changer l'accent anglais (actuellement ${accent === 'en-GB' ? 'British' : 'American'})`}
             >
               <span>{accent === 'en-GB' ? '🇬🇧 UK' : '🇺🇸 US'}</span>
@@ -95,8 +95,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Reset / Restart game button */}
             <button
               onClick={onOpenResetModal}
-              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/80 text-slate-400 hover:text-rose-400 transition"
-              title="Recommencer la mission à zéro"
+              className="p-1.5 rounded-xl bg-stone-900 border border-stone-800 hover:border-rose-500 text-stone-400 hover:text-rose-400 transition"
+              title="Recommencer la quête à zéro"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -104,26 +104,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Sound toggle */}
             <button
               onClick={toggleSound}
-              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500 text-slate-300 hover:text-white transition"
+              className="p-1.5 rounded-xl bg-stone-900 border border-stone-800 hover:border-amber-500 text-stone-300 hover:text-white transition"
               title={soundActive ? 'Couper le son' : 'Activer le son'}
             >
-              {soundActive ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+              {soundActive ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4 text-stone-500" />}
             </button>
 
             {/* Teacher Guide modal */}
             <button
               onClick={onOpenTeacherGuide}
-              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-indigo-950/60 border border-indigo-500/40 text-indigo-200 hover:text-white hover:bg-indigo-900/60 text-xs font-semibold transition"
+              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-stone-900 border border-amber-600/40 text-amber-200 hover:text-white text-xs font-serif font-semibold transition"
               title="Guide Enseignant"
             >
-              <GraduationCap className="w-4 h-4 text-indigo-400" />
-              <span className="hidden sm:inline">Guide Prof</span>
+              <GraduationCap className="w-4 h-4 text-amber-400" />
+              <span className="hidden sm:inline">Maîtres</span>
             </button>
           </div>
         </div>
 
         {/* Stage Progress Bar (1 to 5) */}
-        <div className="flex items-center justify-between gap-1 pt-1">
+        <div className="flex items-center justify-between gap-1 pt-1 font-serif">
           {stages.map((st) => {
             const isCompleted = progress.stagesCompleted.includes(st.num);
             const isCurrent = progress.currentStage === st.num;
@@ -139,25 +139,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
                 className={`flex-1 py-1 px-1 rounded-lg text-center transition flex flex-col items-center gap-0.5 ${
                   isCurrent
-                    ? 'bg-indigo-600/30 border border-indigo-400 text-indigo-200 shadow-sm'
+                    ? 'bg-amber-950/80 border border-amber-400 text-amber-200 shadow-sm'
                     : isCompleted
-                    ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-300'
-                    : 'bg-slate-900/40 border border-slate-800 text-slate-600 cursor-not-allowed'
+                    ? 'bg-stone-900/90 border border-emerald-500/50 text-emerald-300'
+                    : 'bg-stone-950/40 border border-stone-850 text-stone-600 cursor-not-allowed'
                 }`}
               >
                 <div className="flex items-center gap-1">
                   <span
                     className={`w-3.5 h-3.5 rounded-full text-[9px] font-bold flex items-center justify-center ${
                       isCurrent
-                        ? 'bg-indigo-500 text-white'
+                        ? 'bg-amber-500 text-stone-950'
                         : isCompleted
-                        ? 'bg-emerald-500 text-slate-950'
-                        : 'bg-slate-800 text-slate-500'
+                        ? 'bg-emerald-500 text-stone-950'
+                        : 'bg-stone-800 text-stone-600'
                     }`}
                   >
                     {isCompleted ? '✓' : st.num}
                   </span>
-                  <span className="text-[10px] font-semibold hidden md:inline truncate">
+                  <span className="text-[10px] font-serif font-semibold hidden md:inline truncate">
                     {st.label}
                   </span>
                 </div>

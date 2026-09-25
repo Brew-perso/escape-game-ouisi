@@ -152,7 +152,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-stone-950 text-stone-200 flex flex-col justify-between selection:bg-amber-600 selection:text-stone-950 font-serif">
       {/* Top Bar */}
       <Navbar
         course={course}
@@ -166,65 +166,63 @@ export const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
         {showIntro ? (
-          /* Mission Briefing Welcome Screen */
-          <div className="max-w-xl mx-auto space-y-6 animate-fade-in text-center">
+          /* Mission Briefing Welcome Screen - Medieval Fantasy Grimoire */
+          <div className="max-w-xl mx-auto space-y-6 animate-fade-in text-center font-serif">
             {/* Header badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
-              <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+              <MapPin className="w-3.5 h-3.5 text-amber-400" />
               <span>Campus Latour-Maubourg • Valence</span>
             </div>
 
             {/* Title */}
-            <div className="space-y-3">
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-                Escape Game <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400">Oui-Si LEA</span>
+            <div className="space-y-2">
+              <h1 className="text-3xl sm:text-4xl font-serif font-black tracking-tight text-amber-100">
+                La Quête du <span className="text-amber-400 gold-glow">Grimoire Oui-Si</span>
               </h1>
-              <p className="text-sm font-medium text-indigo-200">
+              <p className="text-xs sm:text-sm text-stone-300 font-serif">
                 {course.title}
               </p>
             </div>
 
             {/* Scenario Card */}
-            <div className="bg-slate-900/90 border border-indigo-500/30 rounded-3xl p-6 shadow-2xl text-left space-y-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-36 h-36 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-300">
-                <KeyRound className="w-4 h-4 text-purple-400" />
-                <span>Rapport de Mission : Alerte à Valence</span>
+            <div className="parchment-card rounded-3xl p-6 sm:p-7 shadow-2xl text-left space-y-4 relative overflow-hidden border border-amber-600/40">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300 font-serif">
+                <KeyRound className="w-4 h-4 text-amber-400" />
+                <span>Chronique de la Guilde LEA</span>
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-stone-300 leading-relaxed font-serif">
                 {course.storyIntro}
               </p>
 
               {/* What will be tested / reactivated */}
-              <div className="p-4 bg-slate-950/70 rounded-2xl border border-slate-800 space-y-2">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Tes 4 défis pour ouvrir le coffre :
+              <div className="p-4 bg-stone-950/80 rounded-2xl border border-stone-800 space-y-2.5 font-serif">
+                <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block">
+                  Les 4 Sceaux à desceller pour ouvrir le Reliquaire :
                 </span>
-                <ul className="text-xs text-slate-300 space-y-2">
-                  <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600/40 border border-indigo-400/40 flex items-center justify-center text-[10px] font-bold text-indigo-300 shrink-0">1</span>
-                    <span><strong>The Power of YET :</strong> Neutralise les doutes et active le bouclier mental.</span>
+                <ul className="text-xs text-stone-300 space-y-2">
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-amber-950 border border-amber-500/50 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">I</span>
+                    <span><strong>Le Sceau du YET :</strong> Dissipe le découragement et forge les neurones.</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple-600/40 border border-purple-400/40 flex items-center justify-center text-[10px] font-bold text-purple-300 shrink-0">2</span>
-                    <span><strong>L'Arsenal du Détective :</strong> Les 3 étapes d'or et les dictionnaires YouTube.</span>
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-amber-950 border border-amber-500/50 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">II</span>
+                    <span><strong>Les Parchemins de l'Erudit :</strong> Le rituel en 3 actes et les oracles audio.</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-cyan-600/40 border border-cyan-400/40 flex items-center justify-center text-[10px] font-bold text-cyan-300 shrink-0">3</span>
-                    <span><strong>Le Radar Rythmique :</strong> Tends l'élastique sur la bonne syllabe accentuée.</span>
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-amber-950 border border-amber-500/50 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">III</span>
+                    <span><strong>L'Écho Rythmique :</strong> Tends la corde d'arc sur la syllabe maîtresse.</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-rose-600/40 border border-rose-400/40 flex items-center justify-center text-[10px] font-bold text-rose-300 shrink-0">4</span>
-                    <span><strong>L'Épreuve du Micro :</strong> Parle distinctement et brise le silence !</span>
+                  <li className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-amber-950 border border-amber-500/50 flex items-center justify-center text-[10px] font-bold text-amber-300 shrink-0">IV</span>
+                    <span><strong>L'Épreuve du Verbe :</strong> Fais résonner ta voix dans la chambre d'écho !</span>
                   </li>
                 </ul>
               </div>
 
               {/* Motivational message */}
-              <div className="text-[11px] text-slate-400 italic bg-indigo-950/30 p-3 rounded-xl border border-indigo-500/20">
-                💬 <em>"Mistakes are not signs of failure; they are signs that you are trying and learning."</em> (Slide 7)
+              <div className="text-[11px] text-stone-400 italic bg-stone-950/60 p-3 rounded-xl border border-stone-800 font-serif">
+                💬 <em>"Mistakes are not signs of failure; they are signs that you are trying and learning."</em> (Enseignement des Maîtres)
               </div>
             </div>
 
@@ -232,10 +230,10 @@ export const App: React.FC = () => {
             <div className="pt-2">
               <button
                 onClick={handleStartMission}
-                className="w-full py-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-white font-extrabold text-base rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
+                className="w-full py-4 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-95 text-stone-950 font-serif font-black text-base rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
               >
-                <Play className="w-5 h-5 fill-white" />
-                <span>Commencer la Mission !</span>
+                <Play className="w-5 h-5 fill-stone-950" />
+                <span>Entrer dans la Quête !</span>
               </button>
             </div>
           </div>
@@ -279,12 +277,12 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/90 py-4 px-4 text-center text-xs text-slate-500 space-y-1">
+      <footer className="border-t border-stone-900 bg-stone-950/95 py-4 px-4 text-center text-xs text-stone-500 space-y-1 font-serif">
         <p>
-          Dispositif <strong className="text-slate-400">Oui-Si LEA Valence</strong> • Université Grenoble Alpes
+          Guilde <strong className="text-amber-300">Oui-Si LEA Valence</strong> • Université Grenoble Alpes
         </p>
-        <p className="text-[11px] text-slate-600">
-          Équipe enseignante : Gaël Diraison, Isabelle Darcy, Eric Tchelekian • PWA prête pour Vercel
+        <p className="text-[11px] text-stone-600">
+          Maîtres enseignants : Gaël Diraison, Isabelle Darcy, Eric Tchelekian • PWA Vercel
         </p>
       </footer>
 

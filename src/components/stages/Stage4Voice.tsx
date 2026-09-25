@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, Volume2, CheckCircle2, ArrowRight, Sparkles, Flame } from 'lucide-react';
+import React, { useState } from 'react';
+import { Volume2, CheckCircle2, ArrowRight, Sparkles, Feather } from 'lucide-react';
 import type { CourseSession, VoiceChallenge } from '../../types';
 import { sounds } from '../../utils/audio';
-import { createSpeechRecognizer, matchesTargetWords, requestMicPermission } from '../../utils/speech';
-import { VoiceMeter } from '../VoiceMeter';
+import { InteractiveVoiceOrb } from '../InteractiveVoiceOrb';
 
 interface Stage4Props {
   course: CourseSession;
@@ -14,85 +13,26 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
   const challenges = course.voiceChallenges;
   const [challengeIdx, setChallengeIdx] = useState(0);
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
-  const [isListening, setIsListening] = useState(false);
-  const [speechRecognizer, setSpeechRecognizer] = useState<{ start: () => void; stop: () => void } | null>(null);
-  const [heardTranscript, setHeardTranscript] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const currentChallenge: VoiceChallenge = challenges[challengeIdx];
   const allChallengesDone = completedChallenges.length === challenges.length;
 
-  useEffect(() => {
-    const recognizer = createSpeechRecognizer(
-      (transcript) => {
-        setHeardTranscript(transcript);
-        if (matchesTargetWords(transcript, currentChallenge.targetWords)) {
-          handleSuccess();
-        }
-      },
-      (userFriendlyMsg, rawError) => {
-        console.warn('Speech recognition error:', rawError);
-        // Do not block UI, VoiceMeter still detects volume!
-        setStatusMessage(userFriendlyMsg);
-      },
-      () => {
-        setIsListening(false);
-      },
-      'en-US'
-    );
-    setSpeechRecognizer(recognizer);
-
-    return () => {
-      if (recognizer) recognizer.stop();
-    };
-  }, [challengeIdx]);
-
-  const toggleMic = async () => {
-    if (isListening) {
-      if (speechRecognizer) speechRecognizer.stop();
-      setIsListening(false);
-    } else {
-      setHeardTranscript(null);
-      setStatusMessage('À toi de jouer : parle distinctement dans ton micro !');
-      setIsListening(true);
-
-      const hasPerm = await requestMicPermission();
-      if (!hasPerm) {
-        setStatusMessage("Microphone refusé : autorise l'accès au micro dans ton navigateur.");
-        setIsListening(false);
-        return;
-      }
-
-      if (speechRecognizer) {
-        speechRecognizer.start();
-      }
-    }
-  };
-
   const handleSuccess = () => {
     sounds.playSuccess();
-    if (speechRecognizer && isListening) {
-      speechRecognizer.stop();
-    }
-    setIsListening(false);
 
     if (!completedChallenges.includes(currentChallenge.id)) {
       setCompletedChallenges((prev) => [...prev, currentChallenge.id]);
     }
 
-    setStatusMessage('Génial ! Accentuation et prononciation validées !');
-
     if (challengeIdx < challenges.length - 1) {
       setTimeout(() => {
         setChallengeIdx((prev) => prev + 1);
-        setHeardTranscript(null);
-        setStatusMessage(null);
-      }, 1400);
+      }, 1000);
     }
   };
 
   const handlePlayModel = () => {
-    sounds.speakEnglish(currentChallenge.spokenModelText, { rate: 0.8 });
+    sounds.speakEnglish(currentChallenge.spokenModelText, { rate: 0.85 });
   };
 
   const handleFinish = () => {
@@ -103,33 +43,34 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
   return (
     <div className="space-y-6 max-w-xl mx-auto">
       {/* Header */}
-      <div className="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      <div className="parchment-card rounded-2xl p-5 shadow-2xl relative overflow-hidden border border-amber-600/30">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-rose-600/30 border border-rose-400/50 flex items-center justify-center shrink-0">
-            <Mic className="w-6 h-6 text-rose-400" />
+          <div className="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-500/50 flex items-center justify-center shrink-0 shadow-inner">
+            <Feather className="w-6 h-6 text-amber-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                Épreuve 4/4
+              <span className="text-[11px] font-serif uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                4ème Sceau Mystique
               </span>
-              <span className="text-xs text-amber-400 flex items-center gap-1 font-semibold">
-                <Flame className="w-3.5 h-3.5" /> +250 pts
+              <span className="text-xs text-amber-400 font-mono font-bold">
+                +250 pts
               </span>
             </div>
-            <h2 className="text-lg font-bold text-white mt-1">L'Épreuve du Micro & Défi Vocal</h2>
+            <h2 className="text-lg font-serif font-bold text-amber-100 mt-1">
+              L'Épreuve du Verbe & La Chambre de l'Écho
+            </h2>
           </div>
         </div>
-        <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-          Le dernier verrou réagit aux vibrations d'une voix affirmée.
-          Dépasse la timidité : en LEA Oui-Si, on apprend en osant parler !
+        <p className="text-xs sm:text-sm text-stone-300 mt-3 font-serif leading-relaxed">
+          Le dernier verrou ne cède qu'aux vibrations d'une voix affirmée. Dépasse la réserve : dans la Guilde LEA, l'art du verbe se forge en osant faire résonner la langue !
         </p>
       </div>
 
       {/* Progress */}
       <div className="flex items-center justify-between px-2">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-          Défis oraux ({completedChallenges.length}/{challenges.length})
+        <span className="text-[11px] font-serif uppercase tracking-widest font-bold text-stone-400">
+          Incantations accomplies ({completedChallenges.length}/{challenges.length})
         </span>
         <div className="flex gap-2">
           {challenges.map((c, idx) => (
@@ -137,10 +78,10 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
               key={c.id}
               className={`w-8 h-2 rounded-full transition-all duration-300 ${
                 completedChallenges.includes(c.id)
-                  ? 'bg-emerald-400 shadow-sm shadow-emerald-500/50'
+                  ? 'bg-amber-400 shadow-sm shadow-amber-500/60'
                   : idx === challengeIdx
-                  ? 'bg-rose-500'
-                  : 'bg-slate-700'
+                  ? 'bg-amber-600/70'
+                  : 'bg-stone-800'
               }`}
             />
           ))}
@@ -149,104 +90,63 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
 
       {/* Main card */}
       {!allChallengesDone ? (
-        <div className="bg-slate-900/90 border border-rose-500/40 rounded-3xl p-6 shadow-2xl relative space-y-5">
+        <div className="parchment-card rounded-3xl p-6 shadow-2xl relative space-y-5 border border-amber-600/40">
           <div className="text-center space-y-3">
-            <span className="text-xs font-bold text-rose-400 uppercase tracking-widest">
-              Mission Vocale #{challengeIdx + 1}
+            <span className="text-[11px] font-serif uppercase tracking-widest text-amber-400 font-bold">
+              Épreuve Orale #{challengeIdx + 1}
             </span>
-            <h3 className="text-base font-semibold text-white">
+            <h3 className="text-sm sm:text-base font-serif font-semibold text-stone-200">
               {currentChallenge.prompt}
             </h3>
 
             {/* Target phrase highlight - normal words divided by syllables with stressed uppercase */}
-            <div className="p-4 bg-slate-950/80 rounded-2xl border border-rose-500/30 shadow-inner flex flex-col items-center justify-center gap-2.5">
-              <div className="text-2xl font-black font-mono tracking-wide text-white">
+            <div className="p-4 bg-stone-950/80 rounded-2xl border border-stone-800 shadow-inner flex flex-col items-center justify-center gap-2.5">
+              <div className="text-2xl sm:text-3xl font-serif font-black tracking-wide text-amber-300">
                 {currentChallenge.displaySyllables}
               </div>
 
               <button
                 type="button"
                 onClick={handlePlayModel}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-950/70 hover:bg-indigo-900 px-3.5 py-1.5 rounded-full border border-indigo-500/40 transition"
+                className="inline-flex items-center gap-1.5 text-xs font-serif font-semibold text-amber-200 hover:text-white bg-stone-900 hover:bg-stone-800 px-3.5 py-1.5 rounded-full border border-amber-600/40 transition shadow"
               >
-                <Volume2 className="w-4 h-4 text-indigo-300" />
-                <span>Écouter la prononciation anglaise</span>
+                <Volume2 className="w-4 h-4 text-amber-400" />
+                <span>Écouter la prononciation du Maître</span>
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 italic">
+            <p className="text-xs text-stone-400 font-serif italic">
               💡 {currentChallenge.pedagogicalTip}
             </p>
           </div>
 
-          {/* Voice Input Section */}
-          <div className="space-y-4 pt-2">
-            <div className="flex flex-col items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={toggleMic}
-                className={`w-24 h-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all transform active:scale-95 shadow-2xl ${
-                  isListening
-                    ? 'bg-rose-600 hover:bg-rose-500 ring-4 ring-rose-400/50 animate-pulse text-white'
-                    : 'bg-gradient-to-tr from-rose-600 to-orange-600 hover:from-rose-500 hover:to-orange-500 text-white'
-                }`}
-              >
-                <Mic className="w-10 h-10" />
-                <span className="text-[11px] font-bold uppercase">{isListening ? 'Stop' : 'Parler'}</span>
-              </button>
-
-              {/* Real-time Web Audio Volume & Voice Activity Detector */}
-              <VoiceMeter
-                isListening={isListening}
-                onVoiceDetected={handleSuccess}
-                targetWordDisplay={currentChallenge.displaySyllables}
-              />
-
-              {heardTranscript && (
-                <div className="text-xs font-mono text-cyan-300 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
-                  Transcrit : "{heardTranscript}"
-                </div>
-              )}
-
-              {statusMessage && (
-                <div className="text-xs text-center font-medium text-emerald-300 bg-emerald-950/40 px-4 py-2 rounded-xl border border-emerald-500/30">
-                  {statusMessage}
-                </div>
-              )}
-
-              {/* Direct Instant Validation Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  sounds.playClick();
-                  handleSuccess();
-                }}
-                className="w-full max-w-xs mx-auto py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs rounded-xl border border-emerald-400/40 shadow-lg flex items-center justify-center gap-2 transition"
-              >
-                <Sparkles className="w-4 h-4 text-emerald-200" />
-                <span>J'ai prononcé à voix haute ! (Valider)</span>
-              </button>
-            </div>
+          {/* Interactive Voice Orb with real-time audio volume detection */}
+          <div className="pt-2">
+            <InteractiveVoiceOrb
+              targetWord={currentChallenge.spokenModelText}
+              targetDisplay={currentChallenge.displaySyllables}
+              onSuccess={handleSuccess}
+            />
           </div>
         </div>
       ) : (
         /* All voice challenges completed */
-        <div className="bg-slate-900/90 border border-emerald-500/40 rounded-3xl p-6 shadow-2xl space-y-5 animate-fade-in text-center">
-          <div className="inline-flex p-3 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        <div className="parchment-card rounded-3xl p-6 shadow-2xl space-y-5 animate-fade-in text-center border border-amber-500/40">
+          <div className="inline-flex p-3 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
             <CheckCircle2 className="w-10 h-10" />
           </div>
-          <h3 className="text-xl font-bold text-white">4ème Épreuve Validée !</h3>
-          <p className="text-xs text-slate-300 max-w-sm mx-auto">
-            Tu as prononcé les mots clés et bravé la timidité. Le 4ème et dernier chiffre du coffre est prêt à être révélé.
+          <h3 className="text-xl font-serif font-bold text-amber-100">Le 4ème Sceau a Résonné !</h3>
+          <p className="text-xs text-stone-300 font-serif max-w-sm mx-auto">
+            Ta voix a brisé l'ultime enchantement. Les 4 chiffres du Reliquaire de Latour-Maubourg sont désormais en ta possession.
           </p>
 
           <button
             onClick={handleFinish}
-            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 transform active:scale-95 transition"
+            className="w-full py-4 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-95 text-stone-950 font-serif font-black text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
           >
-            <Sparkles className="w-5 h-5 text-slate-950" />
-            <span>Débloquer le Dernier Chiffre et Ouvrir le Coffre !</span>
-            <ArrowRight className="w-5 h-5 text-slate-950" />
+            <Sparkles className="w-5 h-5 text-stone-950" />
+            <span>Débloquer le Dernier Chiffre et Ouvrir le Reliquaire !</span>
+            <ArrowRight className="w-5 h-5 text-stone-950" />
           </button>
         </div>
       )}

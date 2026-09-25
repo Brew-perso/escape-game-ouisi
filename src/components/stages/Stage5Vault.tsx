@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Unlock, Award, CheckCircle, Copy, RefreshCw, Sparkles, BookOpen, Star } from 'lucide-react';
+import { Lock, Unlock, Award, CheckCircle, Copy, RefreshCw, Sparkles, Scroll, Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { CourseSession, GameProgress } from '../../types';
 import { sounds } from '../../utils/audio';
@@ -17,7 +17,6 @@ export const Stage5Vault: React.FC<Stage5Props> = ({ course, progress, onUpdateN
   const [studentNameInput, setStudentNameInput] = useState(progress.studentName || '');
   const [copied, setCopied] = useState(false);
 
-  // Pre-fill with unlocked digits
   useEffect(() => {
     if (progress.unlockedDigits.length >= 4) {
       setEnteredCode([...progress.unlockedDigits]);
@@ -32,7 +31,6 @@ export const Stage5Vault: React.FC<Stage5Props> = ({ course, progress, onUpdateN
 
     sounds.playClick();
 
-    // Auto advance input if next input exists
     if (cleaned && index < 3) {
       const nextInput = document.getElementById(`vault-digit-${index + 1}`);
       if (nextInput) nextInput.focus();
@@ -45,44 +43,28 @@ export const Stage5Vault: React.FC<Stage5Props> = ({ course, progress, onUpdateN
       sounds.playVaultUnlock();
       setIsUnlocked(true);
 
-      // Trigger multi-color celebratory confetti!
       confetti({
-        particleCount: 120,
+        particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#6366f1', '#a855f7', '#10b981', '#f59e0b', '#ec4899'],
+        colors: ['#d97706', '#f59e0b', '#10b981', '#fbbf24', '#78350f'],
       });
-
-      setTimeout(() => {
-        confetti({
-          particleCount: 80,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-        });
-        confetti({
-          particleCount: 80,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-        });
-      }, 300);
     } else {
       sounds.playGentleError();
-      alert(`Le code n'est pas correct. As-tu bien noté les 4 chiffres débloqués lors des épreuves ? Indice : ${course.vaultCode}`);
+      alert(`La combinaison ne descellera pas le coffre. Vérifie tes 4 chiffres découverts lors des épreuves : ${course.vaultCode}`);
     }
   };
 
   const handleCopySummary = () => {
-    const textToCopy = `🎓 ESCAPE GAME OUI-SI LEA (Valence)
-Agent : ${studentNameInput || 'Étudiant Oui-Si'}
+    const textToCopy = `📜 GUILDE OUI-SI LEA (Valence)
+Initié : ${studentNameInput || 'Apprenti de la Guilde'}
 Score : ${progress.score} pts
-Mission : ${course.title}
+Quête : ${course.title}
 
-🔑 MES CLÉS DU COURS :
-1. The Power of YET : Dire "pas encore" pour muscler le cerveau face aux difficultés.
-2. Word Stress en 3 étapes : Découper -> Repérer la syllabe accentuée (plus forte & plus longue) -> Noter les réductions (schwa /ə/).
-3. Outils secrets : YouGlish (vidéos réelles), Merriam-Webster & Longman (LDOCE).`;
+🔑 LES SECRETS DU GRIMOIRE :
+1. The Power of YET : L'incantation "pas encore" brise le découragement et forge les neurones.
+2. Le Rituel en 3 Actes : Découper -> Repérer la syllabe forte -> Guetter le Schwa /ə/.
+3. Les Archives : YouGlish (voix vivantes), Longman (LDOCE) et Merriam-Webster.`;
 
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
@@ -91,17 +73,17 @@ Mission : ${course.title}
 
   return (
     <div className="space-y-6 max-w-xl mx-auto">
-      {/* Vault Card */}
+      {/* Reliquary Card */}
       {!isUnlocked ? (
-        <div className="bg-slate-900/90 border border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative text-center space-y-6">
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/10">
+        <div className="parchment-card rounded-3xl p-6 sm:p-8 shadow-2xl relative text-center space-y-6 border border-amber-600/40">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-amber-950/70 border-2 border-amber-500/50 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-950/50">
             <Lock className="w-10 h-10 animate-bounce" />
           </div>
 
           <div>
-            <h2 className="text-2xl font-black text-white">Le Coffre de Latour-Maubourg</h2>
-            <p className="text-sm text-slate-300 mt-2">
-              Saisis la combinaison à 4 chiffres récupérée au fil des épreuves pour ouvrir la mallette !
+            <h2 className="text-2xl font-serif font-black text-amber-100">Le Reliquaire de Latour-Maubourg</h2>
+            <p className="text-xs sm:text-sm text-stone-300 font-serif mt-2">
+              Inscris la combinaison runique à 4 chiffres forgée au fil de ta quête pour desceller le Grimoire.
             </p>
           </div>
 
@@ -116,56 +98,54 @@ Mission : ${course.title}
                 maxLength={1}
                 value={enteredCode[idx]}
                 onChange={(e) => handleDigitChange(idx, e.target.value)}
-                className="w-14 h-16 sm:w-16 sm:h-20 text-3xl font-black text-center bg-slate-950 border-2 border-amber-500/50 rounded-2xl text-amber-300 focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-500/20 shadow-inner"
+                className="w-14 h-16 sm:w-16 sm:h-20 text-3xl font-serif font-black text-center bg-stone-950 border-2 border-amber-600/60 rounded-2xl text-amber-300 focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-500/20 shadow-inner"
               />
             ))}
           </div>
 
-          {/* Helper showing unlocked digits from progress */}
-          <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-400">
-            Chiffres collectés pendant ton parcours :{' '}
+          {/* Unlocked digits helper */}
+          <div className="p-3 bg-stone-950/70 rounded-xl border border-stone-800 text-xs text-stone-400 font-serif">
+            Chiffres runiques récoltés :{' '}
             <strong className="text-amber-400 font-mono text-sm tracking-widest">
-              {progress.unlockedDigits.length > 0 ? progress.unlockedDigits.join(' - ') : 'Aucun'}
+              {progress.unlockedDigits.length > 0 ? progress.unlockedDigits.join(' • ') : 'Aucun'}
             </strong>
           </div>
 
           <button
             onClick={handleUnlockAttempt}
-            className="w-full py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 active:scale-95 text-slate-950 font-black text-base rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
+            className="w-full py-4 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-95 text-stone-950 font-serif font-black text-base rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
           >
-            <Unlock className="w-5 h-5 text-slate-950" />
-            <span>Ouvrir la Mallette Secrète !</span>
+            <Unlock className="w-5 h-5 text-stone-950" />
+            <span>Desceller le Reliquaire Mystique !</span>
           </button>
         </div>
       ) : (
-        /* VICTORY & DIPLOMA CARD */
-        <div className="bg-slate-900/90 border border-emerald-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative space-y-6 animate-fade-in text-center">
-          {/* Badge Icon */}
+        /* VICTORY & SCROLL CERTIFICATE */
+        <div className="parchment-card rounded-3xl p-6 sm:p-8 shadow-2xl relative space-y-6 animate-fade-in text-center border border-amber-500/50">
+          {/* Wax Seal Stamp */}
           <div className="relative inline-block">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-2xl shadow-emerald-500/30 mx-auto flex items-center justify-center">
-              <div className="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center">
-                <Award className="w-12 h-12 text-emerald-400 animate-pulse" />
-              </div>
+            <div className="w-24 h-24 rounded-full wax-seal p-1 shadow-2xl mx-auto flex items-center justify-center border-2 border-red-400/30">
+              <Award className="w-12 h-12 text-amber-200" />
             </div>
-            <div className="absolute -bottom-2 -right-2 bg-amber-500 text-slate-950 rounded-full p-1 shadow-md">
-              <Sparkles className="w-5 h-5" />
+            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-stone-950 rounded-full p-1 shadow">
+              <Sparkles className="w-4 h-4" />
             </div>
           </div>
 
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider mb-2">
-              <CheckCircle className="w-3.5 h-3.5" /> Mission Accomplie
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 text-[11px] font-serif font-bold uppercase tracking-wider mb-2">
+              <CheckCircle className="w-3.5 h-3.5" /> Quête Accomplie avec Bravoure
             </div>
-            <h2 className="text-2xl font-black text-white">Félicitations, Agent LEA !</h2>
-            <p className="text-xs text-slate-300 mt-1">
-              Tu as surmonté les épreuves et débloqué le secret du rythme anglais et du Power of YET !
+            <h2 className="text-2xl font-serif font-black text-amber-100">Félicitations, Initié de la Guilde !</h2>
+            <p className="text-xs text-stone-300 font-serif mt-1">
+              Tu as déjoué les pièges du rythme et percé les arcanes du Power of YET.
             </p>
           </div>
 
-          {/* Student Profile & Badge Details */}
-          <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 text-left space-y-3">
+          {/* Student Profile Card */}
+          <div className="p-4 bg-stone-950/80 rounded-2xl border border-stone-800 text-left space-y-3 font-serif">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-400">Ton Prénom / Pseudo :</label>
+              <label className="text-xs font-semibold text-stone-400">Ton Nom / Surnom d'Initié :</label>
               <input
                 type="text"
                 placeholder="Ex: Camille"
@@ -174,65 +154,65 @@ Mission : ${course.title}
                   setStudentNameInput(e.target.value);
                   onUpdateName(e.target.value);
                 }}
-                className="px-3 py-1 bg-slate-900 border border-slate-700 rounded-lg text-xs font-bold text-emerald-300 text-right focus:outline-none focus:border-emerald-500"
+                className="px-3 py-1 bg-stone-900 border border-stone-700 rounded-lg text-xs font-bold text-amber-300 text-right focus:outline-none focus:border-amber-500"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 text-center">
-              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">Score Final</span>
-                <span className="text-xl font-extrabold text-amber-400 font-mono">
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-800 text-center">
+              <div className="p-2.5 rounded-xl bg-stone-900/60 border border-stone-800">
+                <span className="text-[10px] uppercase font-bold text-stone-500 block">Honneur & Points</span>
+                <span className="text-xl font-bold text-amber-400 font-mono">
                   {progress.score} pts
                 </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">Rang Obtenu</span>
-                <span className="text-xs font-bold text-indigo-300 flex items-center justify-center gap-1 mt-1">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  Master of YET
+              <div className="p-2.5 rounded-xl bg-stone-900/60 border border-stone-800">
+                <span className="text-[10px] uppercase font-bold text-stone-500 block">Rang de la Guilde</span>
+                <span className="text-xs font-bold text-amber-300 flex items-center justify-center gap-1 mt-1">
+                  <Shield className="w-3.5 h-3.5 text-amber-400" />
+                  Maître du YET
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Pedagogical Cheat Sheet to Take Away */}
-          <div className="p-4 bg-gradient-to-b from-indigo-950/40 to-purple-950/30 rounded-2xl border border-indigo-500/30 text-left space-y-2">
-            <h4 className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-              <BookOpen className="w-4 h-4 text-indigo-400" />
-              Ce que tu retiens pour la semaine prochaine :
+          {/* Grimoire Takeaways */}
+          <div className="p-4 bg-stone-950/80 rounded-2xl border border-amber-600/30 text-left space-y-2 font-serif">
+            <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Scroll className="w-4 h-4 text-amber-400" />
+              Parchemin de Sagesse à conserver :
             </h4>
-            <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+            <ul className="text-xs text-stone-300 space-y-1.5 list-disc list-inside">
               <li>
-                <strong>The Power of YET :</strong> Dire <em>"I cannot speak English fluently... YET!"</em> transforme l'obstacle en opportunité.
+                <strong>The Power of YET :</strong> Dire <em>"I cannot speak English fluently... YET!"</em> transmute l'obstacle en progression.
               </li>
               <li>
-                <strong>L'accent tonique (Word Stress) :</strong> Fais vibrer la syllabe forte (plus haute, plus longue, plus forte) et relâche les autres avec le Schwa /ə/ !
+                <strong>Le Word Stress :</strong> Fais sonner la syllabe maîtresse (plus haute, plus longue, plus sonore) et relâche les autres en Schwa /ə/.
               </li>
               <li>
-                <strong>Le piège du suffixe -EE :</strong> <em>em-ploy-EE</em> prend l'accent sur la fin, contrairement à <em>em-PLOY-er</em>.
+                <strong>Le piège du suffixe -EE :</strong> <em>em-ploy-EE</em> attire l'accent sur sa terminaison, à l'inverse de <em>em-PLOY-er</em>.
               </li>
               <li>
-                <strong>Outils secrets :</strong> <em>YouGlish</em> pour voir des vidéos réelles, <em>LDOCE / Merriam-Webster</em> pour vérifier l'accent.
+                <strong>Les Oracles secrets :</strong> <em>YouGlish</em> pour voir des vidéos authentiques, <em>LDOCE / Merriam-Webster</em> pour guetter la marque d'accent.
               </li>
             </ul>
           </div>
 
           {/* Action buttons */}
-          <div className="space-y-2 pt-2">
+          <div className="space-y-2 pt-2 font-serif">
             <button
               onClick={handleCopySummary}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg transition"
+              className="w-full py-3 bg-amber-700 hover:bg-amber-600 active:scale-95 text-stone-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg transition"
             >
               {copied ? <CheckCircle className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copié dans le presse-papier !' : 'Copier ma fiche bilan pour le prof'}</span>
+              <span>{copied ? 'Parchemin recopié !' : 'Copier le parchemin pour les Maîtres'}</span>
             </button>
 
             <button
               onClick={onRestart}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white font-medium rounded-xl text-xs flex items-center justify-center gap-2 transition"
+              className="w-full py-2.5 bg-stone-900 hover:bg-stone-800 active:scale-95 text-stone-400 hover:text-amber-200 font-medium rounded-xl text-xs flex items-center justify-center gap-2 transition"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Rejouer l'escape game</span>
+              <span>Rejouer la quête depuis l'aube</span>
             </button>
           </div>
         </div>

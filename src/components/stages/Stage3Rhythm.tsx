@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Headphones, Volume2, ArrowRight, CheckCircle2, Flame, Music2 } from 'lucide-react';
+import { Volume2, ArrowRight, CheckCircle2, Music2, Sparkles, Compass } from 'lucide-react';
 import type { CourseSession, SyllableWord } from '../../types';
 import { sounds } from '../../utils/audio';
 
@@ -18,7 +18,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
   const [stretchingIndex, setStretchingIndex] = useState<number | null>(null);
 
   const currentWord: SyllableWord = words[currentWordIndex];
-  const allWordsDone = solvedWordIds.length >= 4; // Complete at least 4 key words to unlock
+  const allWordsDone = solvedWordIds.length >= 4;
 
   const handlePlayWord = () => {
     sounds.speakEnglish(currentWord.audioText || currentWord.word, { rate: 0.85 });
@@ -43,7 +43,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
       sounds.playSuccess();
       setFeedback({
         isCorrect: true,
-        text: `Bravo ! L'accent est sur [${currentWord.syllables[idx].toUpperCase()}]. ${currentWord.soundChangeNote || ''}`,
+        text: `Victoire ! La corde résonne sur [${currentWord.syllables[idx].toUpperCase()}]. ${currentWord.soundChangeNote || ''}`,
       });
 
       if (!solvedWordIds.includes(currentWord.id)) {
@@ -53,7 +53,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
       sounds.playGentleError();
       setFeedback({
         isCorrect: false,
-        text: `Pas tout à fait sur [${currentWord.syllables[idx]}]. Réécoute le mot et étire l'élastique sur la syllabe qui a la voyelle la plus longue et aiguë !`,
+        text: `Faible écho sur [${currentWord.syllables[idx]}]. Réécoute le mot et tends la corde sur la syllabe à la voyelle la plus longue et aiguë !`,
       });
     }
 
@@ -79,45 +79,46 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
   return (
     <div className="space-y-6 max-w-xl mx-auto">
       {/* Header */}
-      <div className="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      <div className="parchment-card rounded-2xl p-5 shadow-2xl relative overflow-hidden border border-amber-600/30">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-cyan-600/30 border border-cyan-400/50 flex items-center justify-center shrink-0">
-            <Headphones className="w-6 h-6 text-cyan-400" />
+          <div className="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-500/50 flex items-center justify-center shrink-0 shadow-inner">
+            <Compass className="w-6 h-6 text-amber-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Épreuve 3/4
+              <span className="text-[11px] font-serif uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                3ème Sceau Mystique
               </span>
-              <span className="text-xs text-amber-400 flex items-center gap-1 font-semibold">
-                <Flame className="w-3.5 h-3.5" /> +250 pts
+              <span className="text-xs text-amber-400 font-mono font-bold">
+                +250 pts
               </span>
             </div>
-            <h2 className="text-lg font-bold text-white mt-1">Le Radar Rythmique & Rubber Band</h2>
+            <h2 className="text-lg font-serif font-bold text-amber-100 mt-1">
+              L'Écho Rythmique & La Corde d'Arc (Rubber Band)
+            </h2>
           </div>
         </div>
-        <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-          En anglais, l'accent tonique (<strong>Word Stress</strong>) est le secret numéro 1 pour se faire comprendre.
-          Écoute le mot, tends l'élastique et trouve la syllabe <strong>forte, longue et aiguë</strong> !
+        <p className="text-xs sm:text-sm text-stone-300 mt-3 font-serif leading-relaxed">
+          En langue anglaise, l'accentuation syllabique est la clé de voûte de toute compréhension. Écoute la prononciation du Maître, bande la corde et désigne la syllabe <strong>forte, longue et aiguë</strong> !
         </p>
       </div>
 
-      {/* Mini rhythm warmup (LA-la vs la-LA from Slide 15) */}
-      <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 text-slate-300">
-          <Music2 className="w-4 h-4 text-cyan-400 shrink-0" />
+      {/* Mini rhythm warmup (LA-la vs la-LA) */}
+      <div className="p-3.5 bg-stone-950/80 border border-stone-800 rounded-2xl flex items-center justify-between text-xs font-serif">
+        <div className="flex items-center gap-2 text-stone-300">
+          <Music2 className="w-4 h-4 text-amber-400 shrink-0" />
           <span>Échauffement rythmique (Slide 15) :</span>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => handlePlayRhythmComparison('LA-la')}
-            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg font-mono text-[11px] text-cyan-300 border border-cyan-500/30 transition"
+            className="px-2.5 py-1 bg-stone-900 hover:bg-stone-800 active:scale-95 rounded-lg text-amber-300 border border-amber-600/30 transition text-[11px]"
           >
             LA - la 🥁
           </button>
           <button
             onClick={() => handlePlayRhythmComparison('la-LA')}
-            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-lg font-mono text-[11px] text-purple-300 border border-purple-500/30 transition"
+            className="px-2.5 py-1 bg-stone-900 hover:bg-stone-800 active:scale-95 rounded-lg text-amber-300 border border-amber-600/30 transition text-[11px]"
           >
             la - LA 🥁
           </button>
@@ -125,10 +126,9 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
       </div>
 
       {/* Word Challenge Card */}
-      <div className="bg-slate-900/90 border border-cyan-500/40 rounded-3xl p-6 shadow-2xl relative space-y-6">
-        {/* Progress indicator */}
-        <div className="flex items-center justify-between text-xs text-slate-400">
-          <span className="font-semibold text-cyan-300">
+      <div className="parchment-card rounded-3xl p-6 shadow-2xl relative space-y-6 border border-amber-600/40">
+        <div className="flex items-center justify-between text-xs font-serif text-stone-400">
+          <span className="font-semibold text-amber-300">
             Mot {currentWordIndex + 1} / {words.length} : {currentWord.category}
           </span>
           <span className="text-emerald-400 font-bold">
@@ -138,26 +138,26 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
 
         {/* Word display & Audio play button */}
         <div className="text-center space-y-3">
-          <h3 className="text-3xl font-extrabold tracking-wide text-white capitalize font-mono">
+          <h3 className="text-3xl font-serif font-black tracking-wide text-amber-200 capitalize">
             {currentWord.word}
           </h3>
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-xs text-stone-400 font-mono">
             {currentWord.phonetic}
           </p>
 
           <button
             onClick={handlePlayWord}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 active:scale-95 text-white font-bold rounded-2xl shadow-lg transition"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-stone-900 hover:bg-stone-800 active:scale-95 text-amber-200 hover:text-white font-serif font-bold text-xs rounded-2xl border border-amber-500/40 shadow-lg transition"
           >
-            <Volume2 className="w-5 h-5 text-cyan-100" />
+            <Volume2 className="w-4 h-4 text-amber-400" />
             <span>Écouter la prononciation</span>
           </button>
         </div>
 
-        {/* Syllable Buttons (The Rubber Band Experience) */}
+        {/* Syllable Buttons (Runic Archery Tablets) */}
         <div className="space-y-3 pt-2">
-          <p className="text-xs font-semibold text-center text-slate-300">
-            Sur quelle syllabe l'accent tonique tape-t-il ? (Clique pour tendre l'élastique) :
+          <p className="text-xs font-serif text-center text-stone-300">
+            Sur quelle syllabe l'accent frappe-t-il ? (Clique pour tendre la corde) :
           </p>
 
           <div className="grid grid-cols-3 gap-3">
@@ -170,35 +170,35 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
                 <button
                   key={idx}
                   onClick={() => handleSyllableClick(idx)}
-                  className={`relative p-4 rounded-2xl border text-center transition-all duration-300 flex flex-col items-center justify-center transform ${
-                    isStretching ? 'scale-110 shadow-cyan-500/50 shadow-lg' : 'hover:scale-105'
+                  className={`relative p-4 rounded-2xl border text-center transition-all duration-300 flex flex-col items-center justify-center transform font-serif ${
+                    isStretching ? 'scale-105 shadow-amber-500/30 shadow-lg' : 'hover:scale-[1.02]'
                   } ${
                     isSelected
                       ? isCorrect
                         ? 'bg-emerald-950/70 border-emerald-400 text-emerald-200'
                         : 'bg-rose-950/70 border-rose-500 text-rose-200'
-                      : 'bg-slate-950/80 border-slate-700 hover:border-cyan-400 text-white'
+                      : 'bg-stone-950/80 border-stone-800 hover:border-amber-500 text-stone-200'
                   }`}
                 >
-                  <span className="text-[10px] uppercase font-bold text-slate-400 mb-1">
+                  <span className="text-[10px] uppercase font-bold text-stone-500 mb-1">
                     Syllabe {idx + 1}
                   </span>
                   <span
-                    className={`font-mono font-bold tracking-wider text-lg uppercase ${
-                      isSelected && isCorrect ? 'text-emerald-300' : 'text-white'
+                    className={`font-serif font-bold tracking-wider text-lg uppercase ${
+                      isSelected && isCorrect ? 'text-emerald-300' : 'text-amber-200'
                     }`}
                   >
                     {syl}
                   </span>
 
-                  {/* Rubber band visual indicator */}
+                  {/* Visual cord string */}
                   <div
-                    className={`mt-2 h-1.5 rounded-full transition-all duration-300 ${
+                    className={`mt-2 h-1 rounded-full transition-all duration-300 ${
                       isSelected && isCorrect
                         ? 'w-full bg-emerald-400 shadow-sm'
                         : isSelected
                         ? 'w-1/2 bg-rose-400'
-                        : 'w-6 bg-slate-700'
+                        : 'w-6 bg-stone-700'
                     }`}
                   />
                 </button>
@@ -210,7 +210,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
         {/* Feedback message */}
         {feedback && (
           <div
-            className={`p-4 rounded-2xl text-xs leading-relaxed border ${
+            className={`p-3.5 rounded-2xl text-xs font-serif leading-relaxed border ${
               feedback.isCorrect
                 ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200'
                 : 'bg-rose-950/40 border-rose-500/50 text-rose-200'
@@ -221,9 +221,9 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
         )}
 
         {/* Hints progression */}
-        <div className="pt-2 border-t border-slate-800 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">Besoin d'un coup de pouce ?</span>
+        <div className="pt-2 border-t border-stone-800 space-y-2">
+          <div className="flex items-center justify-between font-serif">
+            <span className="text-xs text-stone-400">Besoin d'un indice de la Guilde ?</span>
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -232,8 +232,8 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
                 }}
                 className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition ${
                   activeHintLevel >= 1
-                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    ? 'bg-amber-950 border-amber-500/50 text-amber-300'
+                    : 'bg-stone-900 border-stone-800 text-stone-400 hover:text-white'
                 }`}
               >
                 Indice 1
@@ -245,8 +245,8 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
                 }}
                 className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition ${
                   activeHintLevel >= 2
-                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                    ? 'bg-amber-950 border-amber-500/50 text-amber-300'
+                    : 'bg-stone-900 border-stone-800 text-stone-400 hover:text-white'
                 }`}
               >
                 Indice 2 (Règle)
@@ -255,12 +255,12 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
           </div>
 
           {activeHintLevel === 1 && (
-            <p className="text-xs text-amber-200 bg-amber-950/30 p-3 rounded-xl border border-amber-500/30">
+            <p className="text-xs text-amber-200 bg-stone-950/90 p-3 rounded-xl border border-amber-500/30 font-serif">
               💡 {currentWord.hint1}
             </p>
           )}
           {activeHintLevel === 2 && (
-            <p className="text-xs text-amber-200 bg-amber-950/30 p-3 rounded-xl border border-amber-500/30">
+            <p className="text-xs text-amber-200 bg-stone-950/90 p-3 rounded-xl border border-amber-500/30 font-serif">
               💡 {currentWord.hint2}
             </p>
           )}
@@ -271,7 +271,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
           {currentWordIndex < words.length - 1 ? (
             <button
               onClick={handleNextWord}
-              className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition"
+              className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-stone-300 hover:text-amber-200 font-serif font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-stone-800 transition"
             >
               <span>Mot suivant ({currentWordIndex + 2}/{words.length})</span>
               <ArrowRight className="w-4 h-4" />
@@ -280,10 +280,11 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
             allWordsDone && (
               <button
                 onClick={handleFinish}
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-600 via-indigo-600 to-cyan-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl flex items-center justify-center gap-2 transform active:scale-95 transition"
+                className="w-full py-3.5 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-95 text-stone-950 font-serif font-black text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
               >
-                <span>Débloquer le Chiffre n°3 du Coffre</span>
-                <ArrowRight className="w-5 h-5" />
+                <Sparkles className="w-4 h-4 text-stone-950" />
+                <span>Révéler le 3ème Chiffre du Reliquaire</span>
+                <ArrowRight className="w-4 h-4 text-stone-950" />
               </button>
             )
           )}
@@ -293,10 +294,10 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
           <div className="pt-2">
             <button
               onClick={handleFinish}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition"
+              className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-amber-300 font-serif font-bold text-xs rounded-xl border border-amber-500/40 shadow-lg flex items-center justify-center gap-2 transition"
             >
-              <CheckCircle2 className="w-5 h-5" />
-              <span>Suffisamment de mots validés ! Passer à l'épreuve suivante</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Suffisamment de mots maîtrisés ! Passer au 4ème Sceau</span>
             </button>
           </div>
         )}
