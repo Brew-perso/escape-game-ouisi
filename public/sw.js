@@ -1,17 +1,20 @@
-const CACHE_NAME = 'ouisi-quest-v1';
-const ASSETS = [
+const CACHE_NAME = 'ouisi-grimoire-v3.0';
+const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/icons/icon-512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
+  // Force active immediately
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    }).then(() => self.skipWaiting())
+      return cache.addAll(STATIC_ASSETS);
+    })
   );
 });
 
@@ -21,6 +24,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Purging old cache version:', key);
             return caches.delete(key);
           }
         })
@@ -30,29 +34,49 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests
   if (event.request.method !== 'GET') return;
 
-  // Cache-first with network fallback for navigation/assets
+  const url = new URL(event.request.url);
+
+  // 1. Navigation requests (HTML pages): ALWAYS NETWORK FIRST, fallback to cache
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => cached || caches.match('/'));
+        })
+    );
+    return;
+  }
+
+  // 2. Static Assets (JS / CSS with hashed filenames): Cache-first with network revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
+        // Fetch in background to update cache for next time
+        fetch(event.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+        }).catch(() => {});
         return cachedResponse;
       }
+
       return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+        if (!networkResponse || networkResponse.status !== 200) {
           return networkResponse;
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+        const copy = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return networkResponse;
-      }).catch(() => {
-        // Fallback for offline navigation
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
       });
     })
   );

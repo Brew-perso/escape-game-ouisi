@@ -284,8 +284,21 @@ export const App: React.FC = () => {
         <p>
           Guilde <strong className="text-amber-300">Oui-Si LEA Valence</strong> • Université Grenoble Alpes
         </p>
-        <p className="text-[11px] text-stone-600">
-          Maîtres enseignants : Gaël Diraison, Isabelle Darcy, Eric Tchelekian • PWA Vercel
+        <p className="text-[11px] text-stone-600 flex items-center justify-center gap-2">
+          <span>Version Grimoire v3.0</span>
+          <span>•</span>
+          <button
+            onClick={() => {
+              if ((window as any).__forceClearPwaCache) {
+                (window as any).__forceClearPwaCache();
+              } else {
+                window.location.reload();
+              }
+            }}
+            className="text-amber-400/80 hover:text-amber-300 underline cursor-pointer"
+          >
+            Forcer la mise à jour (vider le cache)
+          </button>
         </p>
       </footer>
 
