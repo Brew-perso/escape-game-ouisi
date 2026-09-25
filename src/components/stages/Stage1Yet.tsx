@@ -3,7 +3,7 @@ import { ShieldCheck, Sparkles, Mic, ArrowRight, CheckCircle2, Flame } from 'luc
 import type { CourseSession } from '../../types';
 import { sounds } from '../../utils/audio';
 import { createSpeechRecognizer, matchesTargetWords, requestMicPermission } from '../../utils/speech';
-import { AudioVisualizer } from '../AudioVisualizer';
+import { VoiceMeter } from '../VoiceMeter';
 
 interface Stage1Props {
   course: CourseSession;
@@ -205,7 +205,13 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
                 <span className="text-[10px] font-bold uppercase">{isListening ? 'Stop' : 'Micro'}</span>
               </button>
 
-              {isListening && <AudioVisualizer isListening={isListening} />}
+              {isListening && (
+                <VoiceMeter
+                  isListening={isListening}
+                  onVoiceDetected={handleSuccessYet}
+                  targetWordDisplay="YET !"
+                />
+              )}
 
               {speechFeedback && (
                 <div className="text-xs text-center font-medium text-indigo-300 bg-slate-950/90 px-4 py-2 rounded-xl border border-indigo-500/40 max-w-sm mx-auto shadow-md">

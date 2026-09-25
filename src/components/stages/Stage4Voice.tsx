@@ -3,7 +3,7 @@ import { Mic, Volume2, CheckCircle2, ArrowRight, Sparkles, Flame } from 'lucide-
 import type { CourseSession, VoiceChallenge } from '../../types';
 import { sounds } from '../../utils/audio';
 import { createSpeechRecognizer, matchesTargetWords, requestMicPermission } from '../../utils/speech';
-import { AudioVisualizer } from '../AudioVisualizer';
+import { VoiceMeter } from '../VoiceMeter';
 
 interface Stage4Props {
   course: CourseSession;
@@ -32,7 +32,7 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
       },
       (userFriendlyMsg, rawError) => {
         console.warn('Speech recognition error:', rawError);
-        setIsListening(false);
+        // Do not block UI, VoiceMeter still detects volume!
         setStatusMessage(userFriendlyMsg);
       },
       () => {
@@ -48,12 +48,8 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
   }, [challengeIdx]);
 
   const toggleMic = async () => {
-    if (!speechRecognizer) {
-      setStatusMessage("Reconnaissance vocale non disponible sur ce navigateur. Tu peux valider manuellement ci-dessous !");
-      return;
-    }
     if (isListening) {
-      speechRecognizer.stop();
+      if (speechRecognizer) speechRecognizer.stop();
       setIsListening(false);
     } else {
       setHeardTranscript(null);
@@ -67,7 +63,9 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
         return;
       }
 
-      speechRecognizer.start();
+      if (speechRecognizer) {
+        speechRecognizer.start();
+      }
     }
   };
 
@@ -75,8 +73,8 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
     sounds.playSuccess();
     if (speechRecognizer && isListening) {
       speechRecognizer.stop();
-      setIsListening(false);
     }
+    setIsListening(false);
 
     if (!completedChallenges.includes(currentChallenge.id)) {
       setCompletedChallenges((prev) => [...prev, currentChallenge.id]);
@@ -89,12 +87,12 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
         setChallengeIdx((prev) => prev + 1);
         setHeardTranscript(null);
         setStatusMessage(null);
-      }, 1500);
+      }, 1400);
     }
   };
 
   const handlePlayModel = () => {
-    sounds.speakEnglish(currentChallenge.guidePhonetic.replace(/['"]/g, ''), { rate: 0.8 });
+    sounds.speakEnglish(currentChallenge.spokenModelText, { rate: 0.8 });
   };
 
   const handleFinish = () => {
@@ -123,7 +121,7 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
           </div>
         </div>
         <p className="text-sm text-slate-300 mt-3 leading-relaxed">
-          Le dernier verrou réagit uniquement aux vibrations d'une voix affirmée.
+          Le dernier verrou réagit aux vibrations d'une voix affirmée.
           Dépasse la timidité : en LEA Oui-Si, on apprend en osant parler !
         </p>
       </div>
@@ -152,7 +150,7 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
       {/* Main card */}
       {!allChallengesDone ? (
         <div className="bg-slate-900/90 border border-rose-500/40 rounded-3xl p-6 shadow-2xl relative space-y-5">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-3">
             <span className="text-xs font-bold text-rose-400 uppercase tracking-widest">
               Mission Vocale #{challengeIdx + 1}
             </span>
@@ -160,17 +158,19 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
               {currentChallenge.prompt}
             </h3>
 
-            {/* Target phrase highlight */}
-            <div className="p-4 bg-slate-950/80 rounded-2xl border border-rose-500/30 shadow-inner flex flex-col items-center justify-center gap-2">
-              <span className="font-mono text-xl font-extrabold text-rose-300">
-                {currentChallenge.guidePhonetic}
-              </span>
+            {/* Target phrase highlight - normal words divided by syllables with stressed uppercase */}
+            <div className="p-4 bg-slate-950/80 rounded-2xl border border-rose-500/30 shadow-inner flex flex-col items-center justify-center gap-2.5">
+              <div className="text-2xl font-black font-mono tracking-wide text-white">
+                {currentChallenge.displaySyllables}
+              </div>
+
               <button
+                type="button"
                 onClick={handlePlayModel}
-                className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 bg-indigo-950/50 px-3 py-1 rounded-full border border-indigo-500/30 transition"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-white bg-indigo-950/70 hover:bg-indigo-900 px-3.5 py-1.5 rounded-full border border-indigo-500/40 transition"
               >
-                <Volume2 className="w-3.5 h-3.5" />
-                <span>Écouter le modèle audio</span>
+                <Volume2 className="w-4 h-4 text-indigo-300" />
+                <span>Écouter la prononciation anglaise</span>
               </button>
             </div>
 
@@ -195,7 +195,12 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
                 <span className="text-[11px] font-bold uppercase">{isListening ? 'Stop' : 'Parler'}</span>
               </button>
 
-              {isListening && <AudioVisualizer isListening={isListening} />}
+              {/* Real-time Web Audio Volume & Voice Activity Detector */}
+              <VoiceMeter
+                isListening={isListening}
+                onVoiceDetected={handleSuccess}
+                targetWordDisplay={currentChallenge.displaySyllables}
+              />
 
               {heardTranscript && (
                 <div className="text-xs font-mono text-cyan-300 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
@@ -208,21 +213,18 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
                   {statusMessage}
                 </div>
               )}
-            </div>
 
-            {/* Silent room / In-class fallback button */}
-            <div className="pt-3 border-t border-slate-800 text-center space-y-2">
-              <p className="text-[11px] text-slate-500">
-                Dans une salle silencieuse ou micro bloqué ?
-              </p>
+              {/* Direct Instant Validation Button */}
               <button
+                type="button"
                 onClick={() => {
                   sounds.playClick();
                   handleSuccess();
                 }}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white rounded-xl text-xs font-medium border border-slate-700 transition"
+                className="w-full max-w-xs mx-auto py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs rounded-xl border border-emerald-400/40 shadow-lg flex items-center justify-center gap-2 transition"
               >
-                J'ai prononcé à voix haute ! (Valider)
+                <Sparkles className="w-4 h-4 text-emerald-200" />
+                <span>J'ai prononcé à voix haute ! (Valider)</span>
               </button>
             </div>
           </div>

@@ -30,8 +30,10 @@ export interface VoiceChallenge {
   id: string;
   prompt: string;
   targetWords: string[];
+  displaySyllables: string;
+  spokenModelText: string;
   stressedSyllable?: string;
-  guidePhonetic: string;
+  guidePhonetic?: string;
   pedagogicalTip: string;
 }
 
