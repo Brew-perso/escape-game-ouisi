@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, GraduationCap, Compass, Trophy, MapPin } from 'lucide-react';
+import { Volume2, VolumeX, GraduationCap, Compass, Trophy, MapPin, RotateCcw } from 'lucide-react';
 import type { CourseSession, GameProgress } from '../types';
 import { sounds } from '../utils/audio';
 
@@ -8,6 +8,7 @@ interface NavbarProps {
   progress: GameProgress;
   onOpenCourseSelector: () => void;
   onOpenTeacherGuide: () => void;
+  onOpenResetModal: () => void;
   onSelectStage: (stage: number) => void;
 }
 
@@ -16,6 +17,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   progress,
   onOpenCourseSelector,
   onOpenTeacherGuide,
+  onOpenResetModal,
   onSelectStage,
 }) => {
   const [soundActive, setSoundActive] = React.useState(sounds.isSoundEnabled());
@@ -88,6 +90,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               title={`Changer l'accent anglais (actuellement ${accent === 'en-GB' ? 'British' : 'American'})`}
             >
               <span>{accent === 'en-GB' ? '🇬🇧 UK' : '🇺🇸 US'}</span>
+            </button>
+
+            {/* Reset / Restart game button */}
+            <button
+              onClick={onOpenResetModal}
+              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/80 text-slate-400 hover:text-rose-400 transition"
+              title="Recommencer la mission à zéro"
+            >
+              <RotateCcw className="w-4 h-4" />
             </button>
 
             {/* Sound toggle */}

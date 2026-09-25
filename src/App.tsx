@@ -9,6 +9,7 @@ import { Stage4Voice } from './components/stages/Stage4Voice';
 import { Stage5Vault } from './components/stages/Stage5Vault';
 import { TeacherGuideModal } from './components/TeacherGuideModal';
 import { CourseSelectorModal } from './components/CourseSelectorModal';
+import { ResetConfirmModal } from './components/ResetConfirmModal';
 import { InstallPrompt } from './components/InstallPrompt';
 import { sounds } from './utils/audio';
 import { Play, MapPin, KeyRound } from 'lucide-react';
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(true);
   const [isTeacherGuideOpen, setIsTeacherGuideOpen] = useState(false);
   const [isCourseSelectorOpen, setIsCourseSelectorOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   // Initialize progress from localStorage or default
   const [progress, setProgress] = useState<GameProgress>(() => {
@@ -96,6 +98,11 @@ export const App: React.FC = () => {
 
   const handleRestartMission = () => {
     sounds.playClick();
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+      console.warn('Could not clear progress:', err);
+    }
     setProgress({
       sessionId: course.id,
       studentName: progress.studentName,
@@ -107,6 +114,26 @@ export const App: React.FC = () => {
       hintsUsed: 0,
     });
     setShowIntro(true);
+  };
+
+  const handleResetGame = () => {
+    sounds.playClick();
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+      console.warn('Could not clear progress:', err);
+    }
+    setProgress({
+      sessionId: course.id,
+      studentName: progress.studentName,
+      currentStage: 1,
+      stagesCompleted: [],
+      score: 0,
+      unlockedDigits: [],
+      startTime: Date.now(),
+      hintsUsed: 0,
+    });
+    setShowIntro(false); // start immediately on Stage 1
   };
 
   const handleSelectCourse = (newCourse: CourseSession) => {
@@ -132,6 +159,7 @@ export const App: React.FC = () => {
         progress={progress}
         onOpenCourseSelector={() => setIsCourseSelectorOpen(true)}
         onOpenTeacherGuide={() => setIsTeacherGuideOpen(true)}
+        onOpenResetModal={() => setIsResetModalOpen(true)}
         onSelectStage={handleSelectStage}
       />
 
@@ -271,6 +299,12 @@ export const App: React.FC = () => {
         onClose={() => setIsCourseSelectorOpen(false)}
         currentCourseId={course.id}
         onSelectCourse={handleSelectCourse}
+      />
+
+      <ResetConfirmModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onConfirm={handleResetGame}
       />
 
       <InstallPrompt />
