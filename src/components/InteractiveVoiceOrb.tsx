@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, CheckCircle2, Sparkles, AlertCircle, Play } from 'lucide-react';
-import { VoiceEngine } from '../utils/voiceEngine';
-import type { VoiceEngineState } from '../utils/voiceEngine';
+import { VoiceEngine, type VoiceEngineState } from '../utils/voiceEngine';
 import { sounds } from '../utils/audio';
 
 interface InteractiveVoiceOrbProps {
@@ -28,17 +27,27 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   });
 
   const [hasSucceeded, setHasSucceeded] = useState(false);
+  const hasTriggeredRef = useRef(false);
   const voiceEngineRef = useRef<VoiceEngine | null>(null);
+  const onSuccessRef = useRef(onSuccess);
+  onSuccessRef.current = onSuccess;
 
   useEffect(() => {
+    hasTriggeredRef.current = false;
+    setHasSucceeded(false);
+
     voiceEngineRef.current = new VoiceEngine((newState) => {
       setEngineState(newState);
 
-      if (newState.voiceDetected && !hasSucceeded) {
+      // Single-shot trigger protection: can NEVER trigger twice
+      if (newState.voiceDetected && !hasTriggeredRef.current) {
+        hasTriggeredRef.current = true;
         setHasSucceeded(true);
         sounds.playSuccess();
+
+        // Advance cleanly after victory animation
         setTimeout(() => {
-          onSuccess();
+          onSuccessRef.current();
         }, 1200);
       }
     });
@@ -46,19 +55,14 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
     return () => {
       if (voiceEngineRef.current) {
         voiceEngineRef.current.stopListening();
+        voiceEngineRef.current = null;
       }
     };
-  }, [targetWord, hasSucceeded]);
-
-  // Reset local state when target changes
-  useEffect(() => {
-    setHasSucceeded(false);
-    if (voiceEngineRef.current) {
-      voiceEngineRef.current.stopListening();
-    }
   }, [targetWord]);
 
   const handleOrbClick = async () => {
+    if (hasTriggeredRef.current || hasSucceeded) return;
+
     sounds.playClick();
     if (engineState.isListening) {
       voiceEngineRef.current?.stopListening();
@@ -68,12 +72,15 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   };
 
   const handleManualValidation = () => {
+    if (hasTriggeredRef.current || hasSucceeded) return;
+    hasTriggeredRef.current = true;
+
     sounds.playClick();
     setHasSucceeded(true);
     if (voiceEngineRef.current) {
       voiceEngineRef.current.stopListening();
     }
-    onSuccess();
+    onSuccessRef.current();
   };
 
   const handlePlayRecording = () => {
@@ -84,7 +91,7 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4 py-2">
+    <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4 py-2 font-serif">
       {/* Interactive Medieval Runic Orb Button */}
       <div className="relative flex items-center justify-center">
         {/* Outer glowing runic ring */}
@@ -99,22 +106,23 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
         <button
           type="button"
           onClick={handleOrbClick}
+          disabled={hasSucceeded}
           className={`relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 flex flex-col items-center justify-center gap-1 transition-all transform active:scale-95 shadow-2xl ${
             hasSucceeded
-              ? 'bg-emerald-950 border-emerald-500 text-emerald-400 ring-4 ring-emerald-500/30'
+              ? 'bg-emerald-950 border-emerald-500 text-emerald-400 ring-4 ring-emerald-500/30 cursor-default'
               : engineState.isListening
-              ? 'bg-gradient-to-b from-amber-700 via-amber-900 to-stone-950 border-amber-400 text-amber-200 ring-4 ring-amber-500/40 animate-medieval-pulse'
-              : 'bg-gradient-to-b from-stone-800 to-stone-950 border-amber-600/60 hover:border-amber-400 text-amber-400 hover:text-amber-200'
+              ? 'bg-gradient-to-b from-amber-700 via-amber-900 to-stone-950 border-amber-400 text-amber-200 ring-4 ring-amber-500/40 animate-medieval-pulse cursor-pointer'
+              : 'bg-gradient-to-b from-stone-800 to-stone-950 border-amber-600/60 hover:border-amber-400 text-amber-400 hover:text-amber-200 cursor-pointer'
           }`}
         >
           {hasSucceeded ? (
-            <CheckCircle2 className="w-10 h-10 animate-bounce" />
+            <CheckCircle2 className="w-10 h-10 animate-bounce text-emerald-400" />
           ) : (
             <Mic className={`w-9 h-9 sm:w-10 sm:h-10 ${engineState.isListening ? 'animate-pulse text-amber-300' : ''}`} />
           )}
 
           <span className="text-[10px] sm:text-xs font-serif uppercase tracking-widest font-bold">
-            {hasSucceeded ? 'Validé !' : engineState.isListening ? 'À l\'écoute' : 'Prononcer'}
+            {hasSucceeded ? 'Sceau Brisé !' : engineState.isListening ? 'À l\'écoute' : 'Prononcer'}
           </span>
         </button>
       </div>
@@ -130,20 +138,22 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
           {/* Real Audio Volume Bar */}
           <div className="w-full h-2.5 bg-stone-950 rounded-full overflow-hidden border border-stone-800 p-0.5">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-600 via-amber-400 to-emerald-400 transition-all duration-75"
+              className={`h-full rounded-full transition-all duration-75 ${
+                engineState.volume >= 25
+                  ? 'bg-gradient-to-r from-amber-500 to-emerald-400'
+                  : 'bg-gradient-to-r from-stone-700 to-amber-600'
+              }`}
               style={{ width: `${Math.max(4, engineState.volume)}%` }}
             />
           </div>
 
           <p className="text-[11px] text-stone-300 font-serif italic">
-            Parle fort et distinctement dans le micro : <strong className="text-amber-300">{targetDisplay}</strong> !
+            {engineState.volume >= 25 ? (
+              <span className="text-emerald-300 font-bold">🔥 Voix reçue ! Continue...</span>
+            ) : (
+              <>Parle fort et distinctement : <strong className="text-amber-300">{targetDisplay}</strong> !</>
+            )}
           </p>
-
-          {engineState.transcript && (
-            <div className="text-xs font-mono text-emerald-300 bg-stone-950/80 px-2 py-1 rounded-lg border border-emerald-500/30">
-              Capté : "{engineState.transcript}"
-            </div>
-          )}
         </div>
       )}
 
@@ -168,14 +178,16 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
       )}
 
       {/* Direct Fallback Validation Button */}
-      <button
-        type="button"
-        onClick={handleManualValidation}
-        className="w-full max-w-xs py-2.5 px-4 bg-stone-900 hover:bg-stone-800 active:scale-95 text-stone-300 hover:text-amber-200 font-serif text-xs rounded-xl border border-stone-800 hover:border-amber-600/50 shadow flex items-center justify-center gap-2 transition"
-      >
-        <Sparkles className="w-4 h-4 text-amber-400" />
-        <span>J'ai prononcé à voix haute ! (Valider)</span>
-      </button>
+      {!hasSucceeded && (
+        <button
+          type="button"
+          onClick={handleManualValidation}
+          className="w-full max-w-xs py-2.5 px-4 bg-stone-900 hover:bg-stone-800 active:scale-95 text-stone-300 hover:text-amber-200 font-serif text-xs rounded-xl border border-stone-800 hover:border-amber-600/50 shadow flex items-center justify-center gap-2 transition"
+        >
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          <span>J'ai prononcé à voix haute ! (Valider)</span>
+        </button>
+      )}
     </div>
   );
 };

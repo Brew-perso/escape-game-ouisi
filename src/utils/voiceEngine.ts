@@ -20,10 +20,12 @@ export class VoiceEngine {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private animFrameId: number | null = null;
+  private listeningStartTimestamp: number = 0;
   private lastFrameTimestamp: number = 0;
+  private lastStateUpdateTimestamp: number = 0;
   private accumulatedSpeechMs: number = 0;
   private onStateChange: (state: VoiceEngineState) => void;
-  private requiredSpeechMs: number = 220; // 220ms of vocal energy reliably catches "YET !"
+  private requiredSpeechMs: number = 260; // 260ms of continuous vocal energy
   private isProcessingSuccess: boolean = false;
 
   private state: VoiceEngineState = {
@@ -55,6 +57,9 @@ export class VoiceEngine {
     this.audioChunks = [];
     this.accumulatedSpeechMs = 0;
     this.isProcessingSuccess = false;
+    this.listeningStartTimestamp = performance.now();
+    this.lastFrameTimestamp = performance.now();
+    this.lastStateUpdateTimestamp = 0;
 
     this.updateState({
       isListening: true,
@@ -77,7 +82,7 @@ export class VoiceEngine {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
-            noiseSuppression: false, // Don't filter out short sharp bursts like "YET"
+            noiseSuppression: false,
             autoGainControl: true,
           },
         });
@@ -108,18 +113,16 @@ export class VoiceEngine {
       this.analyser.smoothingTimeConstant = 0.25;
       source.connect(this.analyser);
 
-      // Keep-alive dummy gain node (value 0) connected to destination:
-      // Guarantees Android Chrome rendering thread continuously pulls audio from mic
+      // Keep-alive dummy gain node (value 0) connected to destination
       this.dummyGain = this.audioCtx.createGain();
       this.dummyGain.gain.value = 0;
       source.connect(this.dummyGain);
       this.dummyGain.connect(this.audioCtx.destination);
 
-      // 5. Start MediaRecorder for immediate voice replay
+      // 5. Start MediaRecorder for voice replay
       this.startMediaRecorder(stream);
 
       // 6. Start volume & vocal energy loop
-      this.lastFrameTimestamp = performance.now();
       this.startVolumeLoop();
     } catch (err: any) {
       console.error('VoiceEngine startup error:', err);
@@ -180,12 +183,16 @@ export class VoiceEngine {
     const check = () => {
       if (!this.analyser || !this.state.isListening || this.isProcessingSuccess) return;
 
+      const now = performance.now();
+      const deltaMs = Math.min(100, Math.max(1, now - this.lastFrameTimestamp));
+      this.lastFrameTimestamp = now;
+
       // Resume context if browser suspended it in background
       if (this.audioCtx && this.audioCtx.state === 'suspended') {
         this.audioCtx.resume().catch(() => {});
       }
 
-      // 1. Analyze Vocal Frequency Band (approx 150 Hz to 3500 Hz: bins 2 to 36)
+      // 1. Analyze Vocal Frequency Band (approx 180 Hz to 3500 Hz: bins 2 to 36)
       this.analyser.getByteFrequencyData(freqBuffer);
       let vocalSum = 0;
       const minBin = 2;
@@ -194,7 +201,7 @@ export class VoiceEngine {
         vocalSum += freqBuffer[i];
       }
       const vocalAvg = vocalSum / Math.max(1, maxBin - minBin); // 0 - 255
-      const freqVolume = Math.min(100, Math.round((vocalAvg / 140) * 100));
+      const freqVolume = Math.min(100, Math.round((vocalAvg / 130) * 100));
 
       // 2. Analyze Time Domain Peak (instantaneous amplitude deviation from 128)
       this.analyser.getByteTimeDomainData(timeBuffer);
@@ -203,33 +210,37 @@ export class VoiceEngine {
         const dev = Math.abs(timeBuffer[i] - 128);
         if (dev > maxDev) maxDev = dev;
       }
-      const peakVolume = Math.min(100, Math.round((maxDev / 50) * 100));
+      const peakVolume = Math.min(100, Math.round((maxDev / 55) * 100));
 
-      // Combined volume gives instantaneous reaction to speech
       const currentVolume = Math.max(freqVolume, peakVolume);
-      this.updateState({ volume: currentVolume });
 
-      // Frame time delta in milliseconds (frame-rate independent for 60Hz and 120Hz screens)
-      const now = performance.now();
-      const deltaMs = Math.min(100, Math.max(1, now - this.lastFrameTimestamp));
-      this.lastFrameTimestamp = now;
+      // Warmup guard: Ignore first 350ms of audio to discard button tap click and hardware mic pop
+      const timeSinceStart = now - this.listeningStartTimestamp;
+      if (timeSinceStart > 350) {
+        // Voice activity threshold: Real spoken voice in front of phone is >= 25%
+        // Ambient background noise/silence is < 15%
+        if (currentVolume >= 25) {
+          this.accumulatedSpeechMs += deltaMs;
 
-      // Voice activity threshold (volume >= 14% is clearly distinct from background ambient room hum)
-      if (currentVolume >= 14) {
-        this.accumulatedSpeechMs += deltaMs;
-        this.updateState({ spokenDurationMs: Math.round(this.accumulatedSpeechMs) });
-
-        // If voice burst matches threshold (~220ms for "YET !"), validate immediately!
-        if (this.accumulatedSpeechMs >= this.requiredSpeechMs && !this.isProcessingSuccess) {
-          this.triggerSuccess();
-          return;
+          if (this.accumulatedSpeechMs >= this.requiredSpeechMs && !this.isProcessingSuccess) {
+            this.triggerSuccess();
+            return;
+          }
+        } else {
+          // Pause decay
+          if (this.accumulatedSpeechMs > 0) {
+            this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - deltaMs * 0.4);
+          }
         }
-      } else {
-        // Natural speech pause decay
-        if (this.accumulatedSpeechMs > 0) {
-          this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - deltaMs * 0.4);
-          this.updateState({ spokenDurationMs: Math.round(this.accumulatedSpeechMs) });
-        }
+      }
+
+      // Throttle React state updates to ~25 FPS (every 40ms) to prevent UI overload
+      if (now - this.lastStateUpdateTimestamp >= 40) {
+        this.lastStateUpdateTimestamp = now;
+        this.updateState({
+          volume: currentVolume,
+          spokenDurationMs: Math.round(this.accumulatedSpeechMs),
+        });
       }
 
       this.animFrameId = requestAnimationFrame(check);
@@ -240,15 +251,40 @@ export class VoiceEngine {
 
   private triggerSuccess() {
     this.isProcessingSuccess = true;
+
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+
+    // Stop listening immediately so no subsequent frames or sound can re-trigger
     this.updateState({
       voiceDetected: true,
       volume: 100,
+      isListening: false,
     });
 
-    // Allow user to see the success flash and record final audio snippet
-    setTimeout(() => {
-      this.stopListening();
-    }, 700);
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      try {
+        this.mediaRecorder.stop();
+      } catch (e) {}
+    }
+
+    if (this.mediaStream) {
+      try {
+        this.mediaStream.getTracks().forEach((t) => t.stop());
+      } catch (e) {}
+      this.mediaStream = null;
+    }
+
+    if (this.dummyGain) {
+      try {
+        this.dummyGain.disconnect();
+      } catch (e) {}
+      this.dummyGain = null;
+    }
+
+    this.analyser = null;
   }
 
   public stopListening() {
@@ -256,6 +292,8 @@ export class VoiceEngine {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
     }
+
+    this.isProcessingSuccess = false;
 
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       try {
@@ -282,6 +320,8 @@ export class VoiceEngine {
     this.updateState({
       isListening: false,
       volume: 0,
+      voiceDetected: false,
+      spokenDurationMs: 0,
     });
   }
 }

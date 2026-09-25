@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Volume2, CheckCircle2, ArrowRight, Sparkles, Feather } from 'lucide-react';
 import type { CourseSession, VoiceChallenge } from '../../types';
 import { sounds } from '../../utils/audio';
@@ -13,11 +13,16 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
   const challenges = course.voiceChallenges;
   const [challengeIdx, setChallengeIdx] = useState(0);
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
+  const isAdvancingRef = useRef(false);
 
-  const currentChallenge: VoiceChallenge = challenges[challengeIdx];
+  const currentChallenge: VoiceChallenge =
+    challenges[Math.min(challengeIdx, challenges.length - 1)] || challenges[0];
   const allChallengesDone = completedChallenges.length === challenges.length;
 
   const handleSuccess = () => {
+    if (isAdvancingRef.current) return;
+    isAdvancingRef.current = true;
+
     sounds.playSuccess();
 
     if (!completedChallenges.includes(currentChallenge.id)) {
@@ -26,8 +31,11 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
 
     if (challengeIdx < challenges.length - 1) {
       setTimeout(() => {
-        setChallengeIdx((prev) => prev + 1);
-      }, 1000);
+        setChallengeIdx((prev) => Math.min(prev + 1, challenges.length - 1));
+        isAdvancingRef.current = false;
+      }, 1400);
+    } else {
+      isAdvancingRef.current = false;
     }
   };
 
@@ -123,6 +131,7 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
           {/* Interactive Voice Orb with real-time audio volume detection */}
           <div className="pt-2">
             <InteractiveVoiceOrb
+              key={`stage4-challenge-${currentChallenge.id}`}
               targetWord={currentChallenge.spokenModelText}
               targetDisplay={currentChallenge.displaySyllables}
               onSuccess={handleSuccess}

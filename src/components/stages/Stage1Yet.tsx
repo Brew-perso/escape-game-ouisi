@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Shield, ArrowRight, CheckCircle2, Scroll, Sparkles } from 'lucide-react';
 import type { CourseSession } from '../../types';
 import { sounds } from '../../utils/audio';
@@ -16,12 +16,16 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
   const [questionAnswered, setQuestionAnswered] = useState(false);
   const [selectedMindsetOption, setSelectedMindsetOption] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const isAdvancingRef = useRef(false);
 
   const sentences = course.yetSentences;
-  const currentSentence = sentences[activeSentenceIndex];
-  const allSentencesDone = completedSentences.length === sentences.length;
+  const currentSentence = sentences[Math.min(activeSentenceIndex, sentences.length - 1)] || sentences[0];
+  const allSentencesDone = completedSentences.length >= sentences.length;
 
   const handleSuccessYet = () => {
+    if (isAdvancingRef.current) return;
+    isAdvancingRef.current = true;
+
     sounds.playSuccess();
 
     if (!completedSentences.includes(currentSentence.id)) {
@@ -31,12 +35,15 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
     // Play text-to-speech for the transformed sentence
     sounds.speakEnglish(currentSentence.correctedSentence);
 
-    // Advance to next sentence
+    // Advance to next sentence with debounce lock
     if (activeSentenceIndex < sentences.length - 1) {
       setTimeout(() => {
-        setActiveSentenceIndex((prev) => prev + 1);
+        setActiveSentenceIndex((prev) => Math.min(prev + 1, sentences.length - 1));
         setTypedInput('');
-      }, 1200);
+        isAdvancingRef.current = false;
+      }, 1400);
+    } else {
+      isAdvancingRef.current = false;
     }
   };
 
@@ -134,6 +141,7 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
             </p>
 
             <InteractiveVoiceOrb
+              key={`stage1-sentence-${currentSentence.id}`}
               targetWord="yet"
               targetDisplay="YET !"
               onSuccess={handleSuccessYet}

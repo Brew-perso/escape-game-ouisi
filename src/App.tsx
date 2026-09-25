@@ -285,7 +285,7 @@ export const App: React.FC = () => {
           Guilde <strong className="text-amber-300">Oui-Si LEA Valence</strong> • Université Grenoble Alpes
         </p>
         <p className="text-[11px] text-stone-600 flex items-center justify-center gap-2">
-          <span>Version Grimoire v3.1</span>
+          <span>Version Grimoire v3.2</span>
           <span>•</span>
           <button
             onClick={() => {
