@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mic, Volume2, CheckCircle2, ArrowRight, Sparkles, Flame } from 'lucide-react';
 import type { CourseSession, VoiceChallenge } from '../../types';
 import { sounds } from '../../utils/audio';
-import { createSpeechRecognizer, matchesTargetWords } from '../../utils/speech';
+import { createSpeechRecognizer, matchesTargetWords, requestMicPermission } from '../../utils/speech';
 import { AudioVisualizer } from '../AudioVisualizer';
 
 interface Stage4Props {
@@ -30,10 +30,10 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
           handleSuccess();
         }
       },
-      (error) => {
-        console.warn('Speech recognition error:', error);
+      (userFriendlyMsg, rawError) => {
+        console.warn('Speech recognition error:', rawError);
         setIsListening(false);
-        setStatusMessage('Microphone non détecté ou muet. Tu peux utiliser la validation manuelle !');
+        setStatusMessage(userFriendlyMsg);
       },
       () => {
         setIsListening(false);
@@ -47,9 +47,9 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
     };
   }, [challengeIdx]);
 
-  const toggleMic = () => {
+  const toggleMic = async () => {
     if (!speechRecognizer) {
-      alert("La reconnaissance vocale n'est pas disponible sur ce navigateur. Tu peux valider manuellement avec le bouton 'J'ai prononcé à voix haute !'");
+      setStatusMessage("Reconnaissance vocale non disponible sur ce navigateur. Tu peux valider manuellement ci-dessous !");
       return;
     }
     if (isListening) {
@@ -59,6 +59,14 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
       setHeardTranscript(null);
       setStatusMessage('À toi de jouer : parle distinctement dans ton micro !');
       setIsListening(true);
+
+      const hasPerm = await requestMicPermission();
+      if (!hasPerm) {
+        setStatusMessage("Microphone refusé : autorise l'accès au micro dans ton navigateur.");
+        setIsListening(false);
+        return;
+      }
+
       speechRecognizer.start();
     }
   };

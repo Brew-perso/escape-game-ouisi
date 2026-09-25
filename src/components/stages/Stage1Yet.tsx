@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Sparkles, Mic, ArrowRight, CheckCircle2, Flame } from 'lucide-react';
 import type { CourseSession } from '../../types';
 import { sounds } from '../../utils/audio';
-import { createSpeechRecognizer, matchesTargetWords } from '../../utils/speech';
+import { createSpeechRecognizer, matchesTargetWords, requestMicPermission } from '../../utils/speech';
 import { AudioVisualizer } from '../AudioVisualizer';
 
 interface Stage1Props {
@@ -29,13 +29,14 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
     // Setup speech recognition
     const recognizer = createSpeechRecognizer(
       (transcript) => {
-        setSpeechFeedback(`Entendu : "${transcript}"`);
+        setSpeechFeedback(`🎙️ Entendu : "${transcript}"`);
         if (matchesTargetWords(transcript, ['yet', 'pas encore'])) {
           handleSuccessYet();
         }
       },
-      (error) => {
-        console.warn('Speech error:', error);
+      (userFriendlyMsg, rawError) => {
+        console.warn('Speech error:', rawError);
+        setSpeechFeedback(userFriendlyMsg);
         setIsListening(false);
       },
       () => {
@@ -50,17 +51,25 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
     };
   }, [activeSentenceIndex]);
 
-  const toggleMic = () => {
+  const toggleMic = async () => {
     if (!speechRecognizer) {
-      alert("La reconnaissance vocale n'est pas supportée sur ce navigateur ou nécessite HTTPS. Tu peux taper 'YET' ci-dessous !");
+      setSpeechFeedback("Reconnaissance vocale non disponible sur ce navigateur. Tu peux taper 'YET' ci-dessous !");
       return;
     }
     if (isListening) {
       speechRecognizer.stop();
       setIsListening(false);
     } else {
-      setSpeechFeedback('Écoute en cours... Dis "YET !"');
+      setSpeechFeedback('Écoute active... Crie ou dis distinctement "YET !"');
       setIsListening(true);
+
+      const hasPerm = await requestMicPermission();
+      if (!hasPerm) {
+        setSpeechFeedback("Microphone refusé : autorise l'accès au micro dans ton navigateur.");
+        setIsListening(false);
+        return;
+      }
+
       speechRecognizer.start();
     }
   };
@@ -199,27 +208,27 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
               {isListening && <AudioVisualizer isListening={isListening} />}
 
               {speechFeedback && (
-                <div className="text-xs font-medium text-indigo-300 bg-slate-950/80 px-3 py-1.5 rounded-full border border-indigo-500/30">
+                <div className="text-xs text-center font-medium text-indigo-300 bg-slate-950/90 px-4 py-2 rounded-xl border border-indigo-500/40 max-w-sm mx-auto shadow-md">
                   {speechFeedback}
                 </div>
               )}
+
+              {/* Direct voice validation button for students in case speech recognition has noise */}
+              <button
+                type="button"
+                onClick={() => {
+                  sounds.playClick();
+                  handleSuccessYet();
+                }}
+                className="w-full max-w-xs mx-auto py-2.5 px-4 bg-emerald-600/90 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs rounded-xl border border-emerald-400/40 shadow-lg flex items-center justify-center gap-2 transition"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-200" />
+                <span>J'ai dit "YET" à voix haute ! (Valider)</span>
+              </button>
             </div>
 
             {/* Quick Click & Manual Input Fallback */}
             <div className="pt-2 border-t border-slate-800 space-y-3">
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    sounds.playClick();
-                    handleSuccessYet();
-                  }}
-                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white font-bold text-sm rounded-xl shadow-lg flex items-center gap-2 transition"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-200" />
-                  Appliquer le sortilège "+ YET !"
-                </button>
-              </div>
 
               <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-xs mx-auto">
                 <input

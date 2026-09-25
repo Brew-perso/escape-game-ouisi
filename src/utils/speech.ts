@@ -9,12 +9,13 @@ interface SpeechRecognitionEvent extends Event {
 interface SpeechRecognitionInstance extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
+  maxAlternatives: number;
   lang: string;
   start: () => void;
   stop: () => void;
   abort: () => void;
   onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: { error: string }) => void;
+  onerror: (event: { error: string; message?: string }) => void;
   onend: () => void;
 }
 
@@ -30,9 +31,25 @@ export function isSpeechRecognitionSupported(): boolean {
   return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
+// Request permission beforehand on Android to avoid silent aborts
+export async function requestMicPermission(): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    return true;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Immediately stop tracks so the hardware mic is released for SpeechRecognition
+    stream.getTracks().forEach((t) => t.stop());
+    return true;
+  } catch (err) {
+    console.warn('Microphone permission rejected or unavailable:', err);
+    return false;
+  }
+}
+
 export function createSpeechRecognizer(
-  onTranscript: (text: string, isFinal: boolean) => void,
-  onError: (err: string) => void,
+  onTranscript: (text: string) => void,
+  onError: (userFriendlyError: string, rawError: string) => void,
   onEnd: () => void,
   lang: string = 'en-US'
 ): { start: () => void; stop: () => void } | null {
@@ -45,6 +62,7 @@ export function createSpeechRecognizer(
     const recognition = new SpeechRec();
     recognition.continuous = false;
     recognition.interimResults = true;
+    recognition.maxAlternatives = 5;
     recognition.lang = lang;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -52,22 +70,45 @@ export function createSpeechRecognizer(
       let interimTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
+        const item = event.results[i];
+        if (item.isFinal) {
+          finalTranscript += item[0].transcript;
         } else {
-          interimTranscript += event.results[i][0].transcript;
+          interimTranscript += item[0].transcript;
+        }
+
+        // Also check alternative interpretations from Google Speech Recognizer
+        for (let a = 0; a < item.length; a++) {
+          const altText = item[a].transcript;
+          if (cleanSpokenText(altText).includes('yet')) {
+            onTranscript(altText);
+            return;
+          }
         }
       }
 
       if (finalTranscript) {
-        onTranscript(finalTranscript.trim(), true);
+        onTranscript(finalTranscript.trim());
       } else if (interimTranscript) {
-        onTranscript(interimTranscript.trim(), false);
+        onTranscript(interimTranscript.trim());
       }
     };
 
-    recognition.onerror = (e: { error: string }) => {
-      onError(e.error || 'Erreur microphone');
+    recognition.onerror = (e: { error: string; message?: string }) => {
+      const code = e.error || 'unknown';
+      let message = "Erreur microphone : réessaie en parlant plus fort !";
+
+      if (code === 'not-allowed') {
+        message = "Micro bloqué : clique sur le cadenas en haut à gauche de l'URL pour autoriser le micro.";
+      } else if (code === 'no-speech') {
+        message = "Aucun son capté : parle plus fort et rapproche ton micro !";
+      } else if (code === 'audio-capture') {
+        message = "Microphone indisponible (vérifie qu'aucune autre application ne l'utilise).";
+      } else if (code === 'network') {
+        message = "Connexion internet instable pour la voix. Utilise le bouton 'Valider' !";
+      }
+
+      onError(message, code);
     };
 
     recognition.onend = () => {
@@ -77,9 +118,14 @@ export function createSpeechRecognizer(
     return {
       start: () => {
         try {
-          recognition.start();
+          recognition.abort(); // clear any previous stuck session
         } catch {
-          // already started or aborted
+          // ignore
+        }
+        try {
+          recognition.start();
+        } catch (err) {
+          console.warn('Could not start recognition:', err);
         }
       },
       stop: () => {
@@ -100,45 +146,56 @@ export function createSpeechRecognizer(
 export function cleanSpokenText(str: string): string {
   return str
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove accents
     .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?'"’]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-// Check if spoken text contains the target keywords
+// Check if spoken text contains the target keywords (forgiving French accents & Android misrecognitions)
 export function matchesTargetWords(spoken: string, targets: string[]): boolean {
   const cleanedSpoken = cleanSpokenText(spoken);
   const words = cleanedSpoken.split(' ');
 
   return targets.some((target) => {
     const cleanedTarget = cleanSpokenText(target);
+
     // Direct substring or inclusion
     if (cleanedSpoken.includes(cleanedTarget)) return true;
-    // Word by word fuzzy check
     if (words.includes(cleanedTarget)) return true;
-    // For single letters/sounds or slight misrecognitions
+
+    // Forgiving matching for "YET" on Android Chrome
     if (cleanedTarget === 'yet') {
-      return (
-        cleanedSpoken.includes('yet') ||
-        cleanedSpoken.includes('get') || // common speech to text mishearing for yet
-        cleanedSpoken.includes('yes') ||
-        cleanedSpoken.endsWith('et')
-      );
+      const phoneticVariants = [
+        'yet', 'get', 'yep', 'yes', 'yette', 'jet', 'head', 'hate',
+        'yate', 'iet', 'it', 'yeah', 'yup', 'pas encore', 'let', 'hier',
+        'yett', 'iat', 'eate', 'met'
+      ];
+      if (phoneticVariants.some((v) => cleanedSpoken.includes(v) || words.includes(v))) {
+        return true;
+      }
+      if (cleanedSpoken.endsWith('et')) {
+        return true;
+      }
     }
+
+    // Forgiving matching for "EMPLOYEE"
     if (cleanedTarget === 'employee') {
-      return (
-        cleanedSpoken.includes('employee') ||
-        cleanedSpoken.includes('employ') ||
-        cleanedSpoken.includes('employe')
-      );
+      const employeeVariants = ['employee', 'employe', 'employ', 'employes', 'employer', 'trainee'];
+      if (employeeVariants.some((v) => cleanedSpoken.includes(v) || words.includes(v))) {
+        return true;
+      }
     }
+
+    // Forgiving matching for "GOVERNMENT"
     if (cleanedTarget === 'government') {
-      return (
-        cleanedSpoken.includes('government') ||
-        cleanedSpoken.includes('goverment') ||
-        cleanedSpoken.includes('govern')
-      );
+      const govVariants = ['government', 'goverment', 'gouvernement', 'govern', 'gover', 'gov'];
+      if (govVariants.some((v) => cleanedSpoken.includes(v) || words.includes(v))) {
+        return true;
+      }
     }
+
     return false;
   });
 }
