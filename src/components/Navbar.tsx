@@ -19,6 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectStage,
 }) => {
   const [soundActive, setSoundActive] = React.useState(sounds.isSoundEnabled());
+  const [accent, setAccent] = React.useState<'en-GB' | 'en-US'>(sounds.getPreferredAccent());
 
   const toggleSound = () => {
     const next = !soundActive;
@@ -73,6 +74,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Changer de cours"
             >
               <Compass className="w-4 h-4" />
+            </button>
+
+            {/* Accent toggle (UK / US) */}
+            <button
+              onClick={() => {
+                const nextAccent = accent === 'en-GB' ? 'en-US' : 'en-GB';
+                setAccent(nextAccent);
+                sounds.setPreferredAccent(nextAccent);
+                sounds.speakEnglish(nextAccent === 'en-GB' ? 'British English' : 'American English');
+              }}
+              className="px-2 py-1 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-400 text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1 shadow-sm"
+              title={`Changer l'accent anglais (actuellement ${accent === 'en-GB' ? 'British' : 'American'})`}
+            >
+              <span>{accent === 'en-GB' ? '🇬🇧 UK' : '🇺🇸 US'}</span>
             </button>
 
             {/* Sound toggle */}

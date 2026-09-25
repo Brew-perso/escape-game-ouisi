@@ -3,9 +3,11 @@
 class SoundManager {
   private ctx: AudioContext | null = null;
   private soundEnabled: boolean = true;
+  private englishVoices: SpeechSynthesisVoice[] = [];
+  private preferredAccent: 'en-GB' | 'en-US' = 'en-GB';
 
   constructor() {
-    // Lazy initialize on first user gesture
+    this.initVoices();
   }
 
   private initCtx() {
@@ -26,6 +28,47 @@ class SoundManager {
 
   public isSoundEnabled(): boolean {
     return this.soundEnabled;
+  }
+
+  public setPreferredAccent(accent: 'en-GB' | 'en-US') {
+    this.preferredAccent = accent;
+  }
+
+  public getPreferredAccent(): 'en-GB' | 'en-US' {
+    return this.preferredAccent;
+  }
+
+  private initVoices() {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    const refreshVoices = () => {
+      const allVoices = window.speechSynthesis.getVoices();
+      if (!allVoices || allVoices.length === 0) return;
+
+      // STRICTLY filter only English voices, NEVER French or other languages
+      this.englishVoices = allVoices.filter((v) => {
+        const lang = (v.lang || '').toLowerCase().replace('_', '-');
+        return lang.startsWith('en') && !lang.startsWith('fr');
+      });
+    };
+
+    refreshVoices();
+    if (typeof window.speechSynthesis.addEventListener === 'function') {
+      window.speechSynthesis.addEventListener('voiceschanged', refreshVoices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = refreshVoices;
+    }
+  }
+
+  public getAvailableEnglishVoices(): SpeechSynthesisVoice[] {
+    if (this.englishVoices.length === 0 && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const all = window.speechSynthesis.getVoices();
+      this.englishVoices = all.filter((v) => {
+        const lang = (v.lang || '').toLowerCase().replace('_', '-');
+        return lang.startsWith('en') && !lang.startsWith('fr');
+      });
+    }
+    return this.englishVoices;
   }
 
   // Play subtle click
@@ -148,7 +191,6 @@ class SoundManager {
 
     osc.type = 'triangle';
     if (accented) {
-      // Louder, higher pitch, longer
       osc.frequency.setValueAtTime(320, now);
       osc.frequency.exponentialRampToValueAtTime(110, now + 0.2);
       gain.gain.setValueAtTime(0.4, now);
@@ -156,7 +198,6 @@ class SoundManager {
       osc.start(now);
       osc.stop(now + 0.25);
     } else {
-      // Quieter, lower pitch, shorter
       osc.frequency.setValueAtTime(200, now);
       osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
       gain.gain.setValueAtTime(0.12, now);
@@ -198,7 +239,47 @@ class SoundManager {
     });
   }
 
-  // Text-To-Speech using native SpeechSynthesis API
+  // Find the highest quality English voice strictly matching preferences
+  private resolveEnglishVoice(preferredLang: string): SpeechSynthesisVoice | null {
+    const voices = this.getAvailableEnglishVoices();
+    if (!voices || voices.length === 0) return null;
+
+    const target = preferredLang.toLowerCase().replace('_', '-');
+
+    // 1. High quality British / US voices (Google, Daniel, Oliver, Samantha, Serena, Natural)
+    const naturalVoice = voices.find((v) => {
+      const vLang = v.lang.toLowerCase().replace('_', '-');
+      const matchesTarget = vLang.startsWith(target.slice(0, 5));
+      const hasNaturalName =
+        v.name.includes('Google') ||
+        v.name.includes('Natural') ||
+        v.name.includes('Daniel') ||
+        v.name.includes('Oliver') ||
+        v.name.includes('Samantha') ||
+        v.name.includes('Serena') ||
+        v.name.includes('George') ||
+        v.name.includes('Zira');
+      return matchesTarget && hasNaturalName;
+    });
+
+    if (naturalVoice) return naturalVoice;
+
+    // 2. Exact language match (e.g. en-GB or en-US)
+    const exactLangMatch = voices.find((v) => v.lang.toLowerCase().replace('_', '-') === target);
+    if (exactLangMatch) return exactLangMatch;
+
+    // 3. Prefix match (e.g. starts with en-GB)
+    const prefixMatch = voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(target.slice(0, 5)));
+    if (prefixMatch) return prefixMatch;
+
+    // 4. Any English voice
+    const anyEn = voices.find((v) => v.lang.toLowerCase().startsWith('en'));
+    if (anyEn) return anyEn;
+
+    return null;
+  }
+
+  // Text-To-Speech using native SpeechSynthesis API strictly with native English voice
   public speakEnglish(text: string, options: { rate?: number; pitch?: number; lang?: string } = {}) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       return;
@@ -206,22 +287,45 @@ class SoundManager {
 
     window.speechSynthesis.cancel(); // Stop any pending speech
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = options.lang || 'en-GB';
-    utterance.rate = options.rate ?? 0.85; // slightly slower for L1 learners
-    utterance.pitch = options.pitch ?? 1.0;
+    const performSpeak = () => {
+      const targetLang = options.lang || this.preferredAccent;
+      const englishVoice = this.resolveEnglishVoice(targetLang);
 
-    // Try finding a native British or US voice
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+        utterance.lang = englishVoice.lang; // Force match voice language
+      } else {
+        // Fallback: force lang attribute to English US so browser never uses French OS voice
+        utterance.lang = 'en-US';
+      }
+
+      utterance.rate = options.rate ?? 0.85; // pedagogical rate for L1 learners
+      utterance.pitch = options.pitch ?? 1.0;
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // If voices are not yet loaded (Chrome async bug), wait for them
     const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(v => v.lang.startsWith('en-GB') || v.lang.startsWith('en_GB')) 
-      || voices.find(v => v.lang.startsWith('en-US') || v.lang.startsWith('en_US'))
-      || voices.find(v => v.lang.startsWith('en'));
+    if (!voices || voices.length === 0) {
+      const onVoicesReady = () => {
+        window.speechSynthesis.removeEventListener?.('voiceschanged', onVoicesReady);
+        performSpeak();
+      };
 
-    if (englishVoice) {
-      utterance.voice = englishVoice;
+      if (typeof window.speechSynthesis.addEventListener === 'function') {
+        window.speechSynthesis.addEventListener('voiceschanged', onVoicesReady, { once: true });
+      } else {
+        window.speechSynthesis.onvoiceschanged = onVoicesReady;
+      }
+
+      // Safety timeout in case voiceschanged does not trigger
+      setTimeout(performSpeak, 300);
+    } else {
+      performSpeak();
     }
-
-    window.speechSynthesis.speak(utterance);
   }
 }
 
