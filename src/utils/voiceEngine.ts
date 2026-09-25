@@ -1,4 +1,5 @@
-// Robust Web Audio & Speech Engine designed for mobile browsers (including Android Xiaomi/Poco)
+// Bulletproof Web Audio & Acoustic Voice Engine for Mobile Browsers (including Android Xiaomi/Poco)
+import { getSharedAudioContext } from './audio';
 
 export interface VoiceEngineState {
   isListening: boolean;
@@ -15,15 +16,15 @@ export class VoiceEngine {
   private audioCtx: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStream: MediaStream | null = null;
+  private dummyGain: GainNode | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
-  private recognition: any = null;
   private animFrameId: number | null = null;
-  private speechStartTimestamp: number | null = null;
+  private lastFrameTimestamp: number = 0;
   private accumulatedSpeechMs: number = 0;
   private onStateChange: (state: VoiceEngineState) => void;
-  private targetWords: string[] = [];
-  private requiredSpeechMs: number = 350; // 350ms of vocal energy is enough for "YET"
+  private requiredSpeechMs: number = 220; // 220ms of vocal energy reliably catches "YET !"
+  private isProcessingSuccess: boolean = false;
 
   private state: VoiceEngineState = {
     isListening: false,
@@ -45,83 +46,86 @@ export class VoiceEngine {
     this.onStateChange(this.state);
   }
 
-  // Must be called directly on user touch/click to unlock Android audio context
-  public async startListening(targetWords: string[] = ['yet']) {
-    this.targetWords = targetWords;
+  // Must be called directly on user touch/click to unlock mobile AudioContext
+  public async startListening(_targetWords: string[] = ['yet']) {
+    if (this.state.isListening) {
+      this.stopListening();
+    }
+
     this.audioChunks = [];
-    this.speechStartTimestamp = null;
     this.accumulatedSpeechMs = 0;
+    this.isProcessingSuccess = false;
 
     this.updateState({
       isListening: true,
       voiceDetected: false,
       spokenDurationMs: 0,
-      transcript: null,
       errorMessage: null,
+      volume: 0,
     });
 
     try {
-      // 1. Initialize AudioContext synchronously on user click
-      const AudioContextClass =
-        window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!this.audioCtx || this.audioCtx.state === 'closed') {
-        this.audioCtx = new AudioContextClass();
-      }
-      if (this.audioCtx.state === 'suspended') {
+      // 1. Initialize and unlock the shared AudioContext synchronously
+      this.audioCtx = getSharedAudioContext();
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
         await this.audioCtx.resume();
       }
 
-      // 2. Request mic stream with Android-friendly constraints
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: false, // Don't suppress short utterances like "YET"
-          autoGainControl: true,
-        },
-      });
+      // 2. Request mic stream with Android-friendly constraints & graceful fallback
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: false, // Don't filter out short sharp bursts like "YET"
+            autoGainControl: true,
+          },
+        });
+      } catch (constraintErr) {
+        console.warn('Advanced audio constraints failed, falling back to basic audio: true', constraintErr);
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
       this.mediaStream = stream;
       this.updateState({ micPermissionGranted: true });
 
-      // 3. Connect analyser node for true hardware volume metering
-      const source = this.audioCtx.createMediaStreamSource(stream);
-      this.analyser = this.audioCtx.createAnalyser();
-      this.analyser.fftSize = 256;
-      this.analyser.smoothingTimeConstant = 0.3;
-      source.connect(this.analyser);
-
-      // 4. Start MediaRecorder to allow instant playback
-      if (typeof MediaRecorder !== 'undefined') {
-        try {
-          const recorder = new MediaRecorder(stream);
-          recorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-              this.audioChunks.push(e.data);
-            }
-          };
-          recorder.onstop = () => {
-            if (this.audioChunks.length > 0) {
-              const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
-              const url = URL.createObjectURL(blob);
-              this.updateState({ recordedAudioUrl: url });
-            }
-          };
-          recorder.start();
-          this.mediaRecorder = recorder;
-        } catch (recErr) {
-          console.warn('MediaRecorder not available or failed:', recErr);
-        }
+      // 3. Re-verify AudioContext is resumed after permission dialog
+      if (!this.audioCtx || this.audioCtx.state === 'closed') {
+        this.audioCtx = getSharedAudioContext();
+      }
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        await this.audioCtx.resume();
       }
 
-      // 5. Start SpeechRecognition in parallel if supported
-      this.initSpeechRecognition();
+      if (!this.audioCtx) {
+        throw new Error('AudioContext unavailable');
+      }
 
-      // 6. Start volume polling loop (uses time domain deviation from 128 for 100% accuracy)
+      // 4. Connect Web Audio Pipeline
+      const source = this.audioCtx.createMediaStreamSource(stream);
+      this.analyser = this.audioCtx.createAnalyser();
+      this.analyser.fftSize = 512;
+      this.analyser.smoothingTimeConstant = 0.25;
+      source.connect(this.analyser);
+
+      // Keep-alive dummy gain node (value 0) connected to destination:
+      // Guarantees Android Chrome rendering thread continuously pulls audio from mic
+      this.dummyGain = this.audioCtx.createGain();
+      this.dummyGain.gain.value = 0;
+      source.connect(this.dummyGain);
+      this.dummyGain.connect(this.audioCtx.destination);
+
+      // 5. Start MediaRecorder for immediate voice replay
+      this.startMediaRecorder(stream);
+
+      // 6. Start volume & vocal energy loop
+      this.lastFrameTimestamp = performance.now();
       this.startVolumeLoop();
     } catch (err: any) {
       console.error('VoiceEngine startup error:', err);
       let msg = "Microphone non accessible. Vérifie les autorisations de ton navigateur.";
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        msg = "Permission refusée : clique sur le cadenas de l'URL pour autoriser le micro.";
+        msg = "Micro refusé : clique sur le cadenas de l'adresse URL pour autoriser le micro.";
       }
       this.updateState({
         isListening: false,
@@ -131,114 +135,120 @@ export class VoiceEngine {
     }
   }
 
-  private initSpeechRecognition() {
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) return;
+  private startMediaRecorder(stream: MediaStream) {
+    if (typeof MediaRecorder === 'undefined') return;
+
+    let mimeType = '';
+    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+    for (const c of candidates) {
+      if (MediaRecorder.isTypeSupported(c)) {
+        mimeType = c;
+        break;
+      }
+    }
 
     try {
-      const recognition = new SpeechRec();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
 
-      recognition.onresult = (event: any) => {
-        let text = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          text += event.results[i][0].transcript;
-        }
-        if (text) {
-          this.updateState({ transcript: text.trim() });
-          if (this.matchesTarget(text)) {
-            this.triggerSuccess();
-          }
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          this.audioChunks.push(e.data);
         }
       };
 
-      recognition.onerror = (e: any) => {
-        console.warn('SpeechRecognition error (fallback to volume analysis):', e.error);
-        // Do not fail: volume detection handles it!
+      recorder.onstop = () => {
+        if (this.audioChunks.length > 0) {
+          const blob = new Blob(this.audioChunks, { type: mimeType || 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          this.updateState({ recordedAudioUrl: url });
+        }
       };
 
-      recognition.start();
-      this.recognition = recognition;
-    } catch (e) {
-      console.warn('Could not launch SpeechRecognition:', e);
+      recorder.start(100); // 100ms timeslices
+      this.mediaRecorder = recorder;
+    } catch (recErr) {
+      console.warn('MediaRecorder error:', recErr);
     }
   }
 
   private startVolumeLoop() {
     if (!this.analyser) return;
 
-    const buffer = new Uint8Array(this.analyser.fftSize);
+    const freqBuffer = new Uint8Array(this.analyser.frequencyBinCount);
+    const timeBuffer = new Uint8Array(this.analyser.fftSize);
 
     const check = () => {
-      if (!this.analyser || !this.state.isListening) return;
+      if (!this.analyser || !this.state.isListening || this.isProcessingSuccess) return;
 
-      this.analyser.getByteTimeDomainData(buffer);
-
-      // Measure amplitude deviation from center (128)
-      let maxDev = 0;
-      for (let i = 0; i < buffer.length; i++) {
-        const dev = Math.abs(buffer[i] - 128);
-        if (dev > maxDev) maxDev = dev;
+      // Resume context if browser suspended it in background
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {});
       }
 
-      // Scale 0-128 to 0-100%
-      const currentVolume = Math.min(100, Math.round((maxDev / 70) * 100));
+      // 1. Analyze Vocal Frequency Band (approx 150 Hz to 3500 Hz: bins 2 to 36)
+      this.analyser.getByteFrequencyData(freqBuffer);
+      let vocalSum = 0;
+      const minBin = 2;
+      const maxBin = Math.min(36, freqBuffer.length);
+      for (let i = minBin; i < maxBin; i++) {
+        vocalSum += freqBuffer[i];
+      }
+      const vocalAvg = vocalSum / Math.max(1, maxBin - minBin); // 0 - 255
+      const freqVolume = Math.min(100, Math.round((vocalAvg / 140) * 100));
+
+      // 2. Analyze Time Domain Peak (instantaneous amplitude deviation from 128)
+      this.analyser.getByteTimeDomainData(timeBuffer);
+      let maxDev = 0;
+      for (let i = 0; i < timeBuffer.length; i++) {
+        const dev = Math.abs(timeBuffer[i] - 128);
+        if (dev > maxDev) maxDev = dev;
+      }
+      const peakVolume = Math.min(100, Math.round((maxDev / 50) * 100));
+
+      // Combined volume gives instantaneous reaction to speech
+      const currentVolume = Math.max(freqVolume, peakVolume);
       this.updateState({ volume: currentVolume });
 
+      // Frame time delta in milliseconds (frame-rate independent for 60Hz and 120Hz screens)
       const now = performance.now();
+      const deltaMs = Math.min(100, Math.max(1, now - this.lastFrameTimestamp));
+      this.lastFrameTimestamp = now;
 
-      // Voice activity threshold (> 10% volume)
-      if (currentVolume >= 10) {
-        if (!this.speechStartTimestamp) {
-          this.speechStartTimestamp = now;
-        }
-        this.accumulatedSpeechMs += 25;
-        this.updateState({ spokenDurationMs: this.accumulatedSpeechMs });
+      // Voice activity threshold (volume >= 14% is clearly distinct from background ambient room hum)
+      if (currentVolume >= 14) {
+        this.accumulatedSpeechMs += deltaMs;
+        this.updateState({ spokenDurationMs: Math.round(this.accumulatedSpeechMs) });
 
-        // If student spoke for sufficient duration, trigger voice detected!
-        if (this.accumulatedSpeechMs >= this.requiredSpeechMs && !this.state.voiceDetected) {
+        // If voice burst matches threshold (~220ms for "YET !"), validate immediately!
+        if (this.accumulatedSpeechMs >= this.requiredSpeechMs && !this.isProcessingSuccess) {
           this.triggerSuccess();
           return;
         }
       } else {
-        // Slow decay if silence
+        // Natural speech pause decay
         if (this.accumulatedSpeechMs > 0) {
-          this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - 5);
-          this.updateState({ spokenDurationMs: this.accumulatedSpeechMs });
+          this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - deltaMs * 0.4);
+          this.updateState({ spokenDurationMs: Math.round(this.accumulatedSpeechMs) });
         }
       }
 
       this.animFrameId = requestAnimationFrame(check);
     };
 
-    check();
-  }
-
-  private matchesTarget(spoken: string): boolean {
-    const clean = spoken.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?'"’]/g, ' ').trim();
-    const targets = this.targetWords.map((t) => t.toLowerCase().trim());
-
-    if (targets.some((t) => clean.includes(t))) return true;
-
-    // Forgiving English/French phonetics for "yet"
-    if (targets.includes('yet')) {
-      const variants = ['yet', 'get', 'yep', 'yes', 'yette', 'jet', 'head', 'hate', 'it', 'iet', 'hier', 'yeah'];
-      if (variants.some((v) => clean.includes(v))) return true;
-    }
-    return false;
+    this.animFrameId = requestAnimationFrame(check);
   }
 
   private triggerSuccess() {
+    this.isProcessingSuccess = true;
     this.updateState({
       voiceDetected: true,
       volume: 100,
     });
-    // Stop listening after a short celebratory moment
+
+    // Allow user to see the success flash and record final audio snippet
     setTimeout(() => {
       this.stopListening();
-    }, 600);
+    }, 700);
   }
 
   public stopListening() {
@@ -253,17 +263,21 @@ export class VoiceEngine {
       } catch (e) {}
     }
 
-    if (this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch (e) {}
-      this.recognition = null;
-    }
-
     if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((t) => t.stop());
+      try {
+        this.mediaStream.getTracks().forEach((t) => t.stop());
+      } catch (e) {}
       this.mediaStream = null;
     }
+
+    if (this.dummyGain) {
+      try {
+        this.dummyGain.disconnect();
+      } catch (e) {}
+      this.dummyGain = null;
+    }
+
+    this.analyser = null;
 
     this.updateState({
       isListening: false,

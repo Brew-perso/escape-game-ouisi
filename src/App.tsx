@@ -10,6 +10,7 @@ import { Stage5Vault } from './components/stages/Stage5Vault';
 import { TeacherGuideModal } from './components/TeacherGuideModal';
 import { CourseSelectorModal } from './components/CourseSelectorModal';
 import { ResetConfirmModal } from './components/ResetConfirmModal';
+import { MicrophoneDiagnosticModal } from './components/MicrophoneDiagnosticModal';
 import { InstallPrompt } from './components/InstallPrompt';
 import { sounds } from './utils/audio';
 import { Play, MapPin, KeyRound } from 'lucide-react';
@@ -22,6 +23,7 @@ export const App: React.FC = () => {
   const [isTeacherGuideOpen, setIsTeacherGuideOpen] = useState(false);
   const [isCourseSelectorOpen, setIsCourseSelectorOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isMicDiagnosticOpen, setIsMicDiagnosticOpen] = useState(false);
 
   // Initialize progress from localStorage or default
   const [progress, setProgress] = useState<GameProgress>(() => {
@@ -160,6 +162,7 @@ export const App: React.FC = () => {
         onOpenCourseSelector={() => setIsCourseSelectorOpen(true)}
         onOpenTeacherGuide={() => setIsTeacherGuideOpen(true)}
         onOpenResetModal={() => setIsResetModalOpen(true)}
+        onOpenMicDiagnostic={() => setIsMicDiagnosticOpen(true)}
         onSelectStage={handleSelectStage}
       />
 
@@ -303,6 +306,11 @@ export const App: React.FC = () => {
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
         onConfirm={handleResetGame}
+      />
+
+      <MicrophoneDiagnosticModal
+        isOpen={isMicDiagnosticOpen}
+        onClose={() => setIsMicDiagnosticOpen(false)}
       />
 
       <InstallPrompt />

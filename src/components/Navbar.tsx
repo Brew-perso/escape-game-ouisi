@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, GraduationCap, Compass, Shield, RotateCcw } from 'lucide-react';
+import { Volume2, VolumeX, GraduationCap, Compass, Shield, RotateCcw, Mic } from 'lucide-react';
 import type { CourseSession, GameProgress } from '../types';
 import { sounds } from '../utils/audio';
 
@@ -9,6 +9,7 @@ interface NavbarProps {
   onOpenCourseSelector: () => void;
   onOpenTeacherGuide: () => void;
   onOpenResetModal: () => void;
+  onOpenMicDiagnostic: () => void;
   onSelectStage: (stage: number) => void;
 }
 
@@ -18,6 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCourseSelector,
   onOpenTeacherGuide,
   onOpenResetModal,
+  onOpenMicDiagnostic,
   onSelectStage,
 }) => {
   const [soundActive, setSoundActive] = React.useState(sounds.isSoundEnabled());
@@ -99,6 +101,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Recommencer la quête à zéro"
             >
               <RotateCcw className="w-4 h-4" />
+            </button>
+
+            {/* Mic Diagnostic */}
+            <button
+              onClick={onOpenMicDiagnostic}
+              className="p-1.5 rounded-xl bg-stone-900 border border-stone-800 hover:border-amber-400 text-amber-300 hover:text-white transition"
+              title="Tester le microphone (Diagnostic)"
+            >
+              <Mic className="w-4 h-4 text-amber-400" />
             </button>
 
             {/* Sound toggle */}
