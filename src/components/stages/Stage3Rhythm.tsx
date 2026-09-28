@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, ArrowRight, CheckCircle2, Music2, Sparkles, Compass } from 'lucide-react';
+import { Volume2, ArrowRight, Music2, Sparkles, Compass } from 'lucide-react';
 import type { CourseSession, SyllableWord } from '../../types';
 import { sounds } from '../../utils/audio';
 
@@ -18,7 +18,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
   const [stretchingIndex, setStretchingIndex] = useState<number | null>(null);
 
   const currentWord: SyllableWord = words[currentWordIndex];
-  const allWordsDone = solvedWordIds.length >= 4;
+  const allWordsDone = solvedWordIds.length >= words.length;
 
   const handlePlayWord = () => {
     sounds.speakEnglish(currentWord.audioText || currentWord.word, {
@@ -138,7 +138,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
             Mot {currentWordIndex + 1} / {words.length} : {currentWord.category}
           </span>
           <span className="text-emerald-400 font-bold">
-            {solvedWordIds.length} mot(s) maîtrisé(s)
+            {solvedWordIds.length} / {words.length} mot(s) maîtrisé(s)
           </span>
         </div>
 
@@ -311,40 +311,36 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
         </div>
 
         {/* Navigation between words */}
-        <div className="flex items-center justify-between pt-2">
+        {/* Navigation between words / Final completion */}
+        <div className="pt-2">
           {currentWordIndex < words.length - 1 ? (
             <button
               onClick={handleNextWord}
-              className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-stone-300 hover:text-amber-200 font-serif font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-stone-800 transition"
+              disabled={!solvedWordIds.includes(currentWord.id)}
+              className={`w-full py-3.5 font-serif font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition ${
+                solvedWordIds.includes(currentWord.id)
+                  ? 'bg-stone-900 hover:bg-stone-800 text-amber-200 border border-amber-500/40 active:scale-95 cursor-pointer shadow-md'
+                  : 'bg-stone-950 border border-stone-800/80 text-stone-600 cursor-not-allowed'
+              }`}
             >
               <span>Mot suivant ({currentWordIndex + 2}/{words.length})</span>
               <ArrowRight className="w-4 h-4" />
             </button>
-          ) : (
-            allWordsDone && (
-              <button
-                onClick={handleFinish}
-                className="w-full py-3.5 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-95 text-stone-950 font-serif font-black text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
-              >
-                <Sparkles className="w-4 h-4 text-stone-950" />
-                <span>Révéler le 3ème Chiffre du Reliquaire</span>
-                <ArrowRight className="w-4 h-4 text-stone-950" />
-              </button>
-            )
-          )}
-        </div>
-
-        {allWordsDone && currentWordIndex < words.length - 1 && (
-          <div className="pt-2">
+          ) : allWordsDone ? (
             <button
               onClick={handleFinish}
-              className="w-full py-3 bg-stone-900 hover:bg-stone-800 text-amber-300 font-serif font-bold text-xs rounded-xl border border-amber-500/40 shadow-lg flex items-center justify-center gap-2 transition"
+              className="w-full py-3.5 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-95 text-stone-950 font-serif font-black text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 transition"
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Suffisamment de mots maîtrisés ! Passer au 4ème Sceau</span>
+              <Sparkles className="w-4 h-4 text-stone-950" />
+              <span>Révéler le 3ème Chiffre du Reliquaire</span>
+              <ArrowRight className="w-4 h-4 text-stone-950" />
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="w-full py-3 bg-stone-950/60 border border-stone-800 rounded-xl text-center text-xs text-stone-400 font-serif italic">
+              Trouve la syllabe accentuée de ce dernier mot pour déverrouiller le 3ème Sceau !
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
