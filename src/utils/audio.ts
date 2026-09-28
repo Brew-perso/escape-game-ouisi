@@ -52,13 +52,55 @@ class SoundManager {
     return this.preferredAccent;
   }
 
+  private currentAudioElement: HTMLAudioElement | null = null;
+  private customAudioMap: Record<string, string> = {
+    employee: '/audio/employee.mp3',
+    employer: '/audio/employer.mp3',
+  };
+
   public stopSpeech() {
+    if (this.currentAudioElement) {
+      try {
+        this.currentAudioElement.pause();
+        this.currentAudioElement.currentTime = 0;
+      } catch {
+        // ignore
+      }
+      this.currentAudioElement = null;
+    }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
       } catch {
         // ignore
       }
+    }
+  }
+
+  public playAudioFile(url: string, options: { onEnd?: () => void } = {}) {
+    this.stopSpeech();
+    if (typeof window === 'undefined') {
+      options.onEnd?.();
+      return;
+    }
+
+    try {
+      const audio = new Audio(url);
+      this.currentAudioElement = audio;
+      audio.onended = () => {
+        this.currentAudioElement = null;
+        options.onEnd?.();
+      };
+      audio.onerror = () => {
+        this.currentAudioElement = null;
+        options.onEnd?.();
+      };
+      audio.play().catch((err) => {
+        console.warn('Could not play audio file:', err);
+        options.onEnd?.();
+      });
+    } catch {
+      options.onEnd?.();
     }
   }
 
@@ -303,17 +345,25 @@ class SoundManager {
     return null;
   }
 
-  // Text-To-Speech using native SpeechSynthesis API strictly with native English voice
+  // Text-To-Speech using native SpeechSynthesis API or high-fidelity audio clips
   public speakEnglish(
     text: string,
-    options: { rate?: number; pitch?: number; lang?: string; onEnd?: () => void } = {}
+    options: { rate?: number; pitch?: number; lang?: string; audioUrl?: string; onEnd?: () => void } = {}
   ) {
+    this.stopSpeech();
+
+    const cleanKey = text.trim().toLowerCase().replace(/[^a-z]/g, '');
+    const matchedAudio = options.audioUrl || this.customAudioMap[cleanKey];
+
+    if (matchedAudio && typeof window !== 'undefined') {
+      this.playAudioFile(matchedAudio, { onEnd: options.onEnd });
+      return;
+    }
+
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       options.onEnd?.();
       return;
     }
-
-    window.speechSynthesis.cancel(); // Stop any pending speech
 
     const performSpeak = () => {
       const targetLang = options.lang || this.preferredAccent;

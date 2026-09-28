@@ -117,6 +117,7 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
               targetWord={currentChallenge.spokenModelText}
               targetDisplay={currentChallenge.displaySyllables}
               modelAudioText={currentChallenge.spokenModelText}
+              modelAudioUrl={currentChallenge.audioUrl}
               onSuccess={handleSuccess}
               onAdvance={handleNextChallenge}
               nextLabel={

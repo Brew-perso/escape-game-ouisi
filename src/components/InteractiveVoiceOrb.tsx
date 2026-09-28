@@ -7,6 +7,7 @@ interface InteractiveVoiceOrbProps {
   targetWord: string;
   targetDisplay: string;
   modelAudioText?: string;
+  modelAudioUrl?: string;
   externalSuccess?: boolean;
   onSuccess: () => void;
   onAdvance?: () => void;
@@ -18,6 +19,7 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   targetWord,
   targetDisplay,
   modelAudioText,
+  modelAudioUrl,
   externalSuccess,
   onSuccess,
   onAdvance,
@@ -111,7 +113,10 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
 
   const handlePlayModel = () => {
     sounds.stopSpeech();
-    sounds.speakEnglish(modelAudioText || targetWord, { rate: 0.85 });
+    sounds.speakEnglish(modelAudioText || targetWord, {
+      audioUrl: modelAudioUrl,
+      rate: 0.85,
+    });
   };
 
   const handlePlayRecording = () => {

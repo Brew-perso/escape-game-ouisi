@@ -1,11 +1,13 @@
-const CACHE_NAME = 'ouisi-grimoire-v3.3.1';
+const CACHE_NAME = 'ouisi-grimoire-v3.3.2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/icon-512-maskable.png'
+  '/icons/icon-512-maskable.png',
+  '/audio/employee.mp3',
+  '/audio/employer.mp3',
 ];
 
 self.addEventListener('install', (event) => {

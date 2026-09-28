@@ -21,7 +21,10 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
   const allWordsDone = solvedWordIds.length >= 4;
 
   const handlePlayWord = () => {
-    sounds.speakEnglish(currentWord.audioText || currentWord.word, { rate: 0.85 });
+    sounds.speakEnglish(currentWord.audioText || currentWord.word, {
+      audioUrl: currentWord.audioUrl,
+      rate: 0.85,
+    });
   };
 
   const handlePlayRhythmComparison = (pattern: 'LA-la' | 'la-LA') => {
@@ -155,6 +158,44 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
             <Volume2 className="w-4 h-4 text-amber-400" />
             <span>Écouter la prononciation</span>
           </button>
+
+          {/* Audio comparison between employer & employee to eliminate any ambiguity */}
+          {(currentWord.id === 'word-4' || currentWord.id === 'word-5') && (
+            <div className="mt-3 p-3.5 bg-stone-950/90 rounded-2xl border border-amber-500/40 text-left space-y-2.5 font-serif shadow-inner">
+              <div className="flex items-center gap-1.5 text-amber-300 font-bold text-xs uppercase tracking-wider">
+                <span>⚔️ Comparateur de Contraste : Employer vs Employee</span>
+              </div>
+              <p className="text-[11px] text-stone-300 leading-relaxed">
+                Repère bien la bascule : <strong>em-PLOY-er</strong> (accent au milieu sur le radical) vs <strong>em-ploy-EE</strong> (accent propulsé tout à la fin sur le suffixe -EE) !
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => sounds.playAudioFile('/audio/employer.mp3')}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 ${
+                    currentWord.id === 'word-4'
+                      ? 'bg-amber-600/30 border-amber-400 text-amber-200 ring-1 ring-amber-400/50'
+                      : 'bg-stone-900 border-stone-800 text-stone-300 hover:text-white'
+                  }`}
+                >
+                  <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>1. em-PLOY-er (da-DA-da)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => sounds.playAudioFile('/audio/employee.mp3')}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 ${
+                    currentWord.id === 'word-5'
+                      ? 'bg-emerald-600/30 border-emerald-400 text-emerald-200 ring-1 ring-emerald-400/50'
+                      : 'bg-stone-900 border-stone-800 text-stone-300 hover:text-white'
+                  }`}
+                >
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>2. em-ploy-EE (da-da-DA)</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Syllable Buttons (Runic Archery Tablets) */}

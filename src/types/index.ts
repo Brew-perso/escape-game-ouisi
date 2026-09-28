@@ -9,6 +9,7 @@ export interface SyllableWord {
   hint1: string;
   hint2: string;
   audioText?: string;
+  audioUrl?: string;
 }
 
 export interface YetSentence {
@@ -32,6 +33,7 @@ export interface VoiceChallenge {
   targetWords: string[];
   displaySyllables: string;
   spokenModelText: string;
+  audioUrl?: string;
   stressedSyllable?: string;
   guidePhonetic?: string;
   pedagogicalTip: string;
