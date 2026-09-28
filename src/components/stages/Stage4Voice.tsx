@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Volume2, CheckCircle2, ArrowRight, Sparkles, Feather } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, Sparkles, Feather, ArrowRight } from 'lucide-react';
 import type { CourseSession, VoiceChallenge } from '../../types';
 import { sounds } from '../../utils/audio';
 import { InteractiveVoiceOrb } from '../InteractiveVoiceOrb';
@@ -13,37 +13,25 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
   const challenges = course.voiceChallenges;
   const [challengeIdx, setChallengeIdx] = useState(0);
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
-  const isAdvancingRef = useRef(false);
+  const [allChallengesDone, setAllChallengesDone] = useState(false);
 
   const currentChallenge: VoiceChallenge =
     challenges[Math.min(challengeIdx, challenges.length - 1)] || challenges[0];
-  const allChallengesDone = completedChallenges.length === challenges.length;
 
   const handleSuccess = () => {
-    if (isAdvancingRef.current) return;
-    isAdvancingRef.current = true;
-
-    // Stop any model pronunciation immediately so it cannot bleed into the next challenge
     sounds.stopSpeech();
-
     if (!completedChallenges.includes(currentChallenge.id)) {
       setCompletedChallenges((prev) => [...prev, currentChallenge.id]);
     }
-
-    if (challengeIdx < challenges.length - 1) {
-      setChallengeIdx((prev) => Math.min(prev + 1, challenges.length - 1));
-      setTimeout(() => {
-        isAdvancingRef.current = false;
-      }, 400);
-    } else {
-      setTimeout(() => {
-        isAdvancingRef.current = false;
-      }, 400);
-    }
   };
 
-  const handlePlayModel = () => {
-    sounds.speakEnglish(currentChallenge.spokenModelText, { rate: 0.85 });
+  const handleNextChallenge = () => {
+    sounds.stopSpeech();
+    if (challengeIdx < challenges.length - 1) {
+      setChallengeIdx((prev) => prev + 1);
+    } else {
+      setAllChallengesDone(true);
+    }
   };
 
   const handleFinish = () => {
@@ -115,15 +103,6 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
               <div className="text-2xl sm:text-3xl font-serif font-black tracking-wide text-amber-300">
                 {currentChallenge.displaySyllables}
               </div>
-
-              <button
-                type="button"
-                onClick={handlePlayModel}
-                className="inline-flex items-center gap-1.5 text-xs font-serif font-semibold text-amber-200 hover:text-white bg-stone-900 hover:bg-stone-800 px-3.5 py-1.5 rounded-full border border-amber-600/40 transition shadow"
-              >
-                <Volume2 className="w-4 h-4 text-amber-400" />
-                <span>Écouter la prononciation du Maître</span>
-              </button>
             </div>
 
             <p className="text-xs text-stone-400 font-serif italic">
@@ -137,7 +116,14 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
               key={`stage4-challenge-${currentChallenge.id}`}
               targetWord={currentChallenge.spokenModelText}
               targetDisplay={currentChallenge.displaySyllables}
+              modelAudioText={currentChallenge.spokenModelText}
               onSuccess={handleSuccess}
+              onAdvance={handleNextChallenge}
+              nextLabel={
+                challengeIdx < challenges.length - 1
+                  ? `Épreuve suivante (${challengeIdx + 2}/${challenges.length}) ➔`
+                  : "Ouvrir le Reliquaire ➔"
+              }
             />
           </div>
         </div>

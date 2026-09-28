@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Shield, ArrowRight, CheckCircle2, Scroll, Sparkles } from 'lucide-react';
 import type { CourseSession } from '../../types';
 import { sounds } from '../../utils/audio';
@@ -11,50 +11,44 @@ interface Stage1Props {
 
 export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
   const [completedSentences, setCompletedSentences] = useState<string[]>([]);
+  const [manualSuccessSentences, setManualSuccessSentences] = useState<string[]>([]);
   const [activeSentenceIndex, setActiveSentenceIndex] = useState(0);
+  const [allSentencesDone, setAllSentencesDone] = useState(false);
   const [typedInput, setTypedInput] = useState('');
   const [questionAnswered, setQuestionAnswered] = useState(false);
   const [selectedMindsetOption, setSelectedMindsetOption] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
-  const isAdvancingRef = useRef(false);
 
   const sentences = course.yetSentences;
   const currentSentence = sentences[Math.min(activeSentenceIndex, sentences.length - 1)] || sentences[0];
-  const allSentencesDone = completedSentences.length >= sentences.length;
 
   const handleSuccessYet = () => {
-    if (isAdvancingRef.current) return;
-    isAdvancingRef.current = true;
-
+    sounds.stopSpeech();
     if (!completedSentences.includes(currentSentence.id)) {
       setCompletedSentences((prev) => [...prev, currentSentence.id]);
     }
+  };
 
-    // Play text-to-speech for the transformed sentence
-    sounds.speakEnglish(currentSentence.correctedSentence);
-
-    // Advance to next sentence with smooth debounce lock
+  const handleNextSentence = () => {
+    sounds.stopSpeech();
+    setTypedInput('');
     if (activeSentenceIndex < sentences.length - 1) {
-      setTimeout(() => {
-        sounds.stopSpeech(); // Stop speech before next sentence starts so mic doesn't capture speaker audio!
-        setActiveSentenceIndex((prev) => Math.min(prev + 1, sentences.length - 1));
-        setTypedInput('');
-        setTimeout(() => {
-          isAdvancingRef.current = false;
-        }, 400);
-      }, 1000);
+      setActiveSentenceIndex((prev) => prev + 1);
     } else {
-      setTimeout(() => {
-        sounds.stopSpeech();
-        isAdvancingRef.current = false;
-      }, 600);
+      setAllSentencesDone(true);
     }
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (typedInput.trim().toUpperCase() === 'YET') {
-      handleSuccessYet();
+      sounds.playSuccess();
+      if (!completedSentences.includes(currentSentence.id)) {
+        setCompletedSentences((prev) => [...prev, currentSentence.id]);
+      }
+      if (!manualSuccessSentences.includes(currentSentence.id)) {
+        setManualSuccessSentences((prev) => [...prev, currentSentence.id]);
+      }
     } else {
       sounds.playGentleError();
     }
@@ -154,27 +148,37 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
               key={`stage1-sentence-${currentSentence.id}`}
               targetWord="yet"
               targetDisplay="YET !"
+              modelAudioText={currentSentence.correctedSentence.replace('...', ',')}
+              externalSuccess={manualSuccessSentences.includes(currentSentence.id)}
               onSuccess={handleSuccessYet}
+              onAdvance={handleNextSentence}
+              nextLabel={
+                activeSentenceIndex < sentences.length - 1
+                  ? `Malédiction suivante (${activeSentenceIndex + 2}/${sentences.length}) ➔`
+                  : "Passer à l'épreuve de sagesse ➔"
+              }
             />
 
             {/* Quick manual typing fallback */}
-            <div className="pt-2 border-t border-stone-800 text-center">
-              <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-xs mx-auto">
-                <input
-                  type="text"
-                  placeholder="Ou écris YET ici..."
-                  value={typedInput}
-                  onChange={(e) => setTypedInput(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-serif uppercase tracking-widest bg-stone-950 border border-stone-800 rounded-xl focus:outline-none focus:border-amber-500 text-center text-amber-200 font-bold placeholder:text-stone-600"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-amber-700 hover:bg-amber-600 active:scale-95 text-stone-950 font-serif font-bold rounded-xl text-xs transition"
-                >
-                  Dissiper
-                </button>
-              </form>
-            </div>
+            {!completedSentences.includes(currentSentence.id) && (
+              <div className="pt-2 border-t border-stone-800 text-center">
+                <form onSubmit={handleManualSubmit} className="flex gap-2 max-w-xs mx-auto">
+                  <input
+                    type="text"
+                    placeholder="Ou écris YET ici..."
+                    value={typedInput}
+                    onChange={(e) => setTypedInput(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-serif uppercase tracking-widest bg-stone-950 border border-stone-800 rounded-xl focus:outline-none focus:border-amber-500 text-center text-amber-200 font-bold placeholder:text-stone-600"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-amber-700 hover:bg-amber-600 active:scale-95 text-stone-950 font-serif font-bold rounded-xl text-xs transition"
+                  >
+                    Dissiper
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       ) : (

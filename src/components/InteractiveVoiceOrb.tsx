@@ -1,19 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, CheckCircle2, Sparkles, AlertCircle, Play } from 'lucide-react';
+import { Mic, CheckCircle2, Sparkles, AlertCircle, Play, Volume2, RotateCcw, ArrowRight } from 'lucide-react';
 import { VoiceEngine, type VoiceEngineState } from '../utils/voiceEngine';
 import { sounds } from '../utils/audio';
 
 interface InteractiveVoiceOrbProps {
   targetWord: string;
   targetDisplay: string;
+  modelAudioText?: string;
+  externalSuccess?: boolean;
   onSuccess: () => void;
+  onAdvance?: () => void;
+  nextLabel?: string;
   accentColor?: 'amber' | 'emerald' | 'rose';
 }
 
 export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   targetWord,
   targetDisplay,
+  modelAudioText,
+  externalSuccess,
   onSuccess,
+  onAdvance,
+  nextLabel,
 }) => {
   const [engineState, setEngineState] = useState<VoiceEngineState>({
     isListening: false,
@@ -29,13 +37,20 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   const [hasSucceeded, setHasSucceeded] = useState(false);
   const hasTriggeredRef = useRef(false);
   const mountCooldownRef = useRef(false);
-  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceEngineRef = useRef<VoiceEngine | null>(null);
   const onSuccessRef = useRef(onSuccess);
 
   useEffect(() => {
     onSuccessRef.current = onSuccess;
   }, [onSuccess]);
+
+  useEffect(() => {
+    if (externalSuccess && !hasSucceeded) {
+      hasTriggeredRef.current = true;
+      setHasSucceeded(true);
+      voiceEngineRef.current?.stopListening();
+    }
+  }, [externalSuccess, hasSucceeded]);
 
   useEffect(() => {
     hasTriggeredRef.current = false;
@@ -55,20 +70,15 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
         hasTriggeredRef.current = true;
         setHasSucceeded(true);
         sounds.playSuccess();
+        voiceEngineRef.current?.stopListening();
 
-        // Advance cleanly after victory animation (~850ms)
-        advanceTimerRef.current = setTimeout(() => {
-          onSuccessRef.current();
-        }, 850);
+        // Notify parent immediately so state is saved, but DO NOT auto-advance!
+        onSuccessRef.current();
       }
     });
 
     return () => {
       clearTimeout(mountTimer);
-      if (advanceTimerRef.current) {
-        clearTimeout(advanceTimerRef.current);
-        advanceTimerRef.current = null;
-      }
       if (voiceEngineRef.current) {
         voiceEngineRef.current.stopListening();
         voiceEngineRef.current = null;
@@ -96,21 +106,50 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
     if (voiceEngineRef.current) {
       voiceEngineRef.current.stopListening();
     }
-    // Clean delay so user sees "Sceau Brisé !" rather than an instant 0ms skip
-    advanceTimerRef.current = setTimeout(() => {
-      onSuccessRef.current();
-    }, 650);
+    onSuccessRef.current();
+  };
+
+  const handlePlayModel = () => {
+    sounds.stopSpeech();
+    sounds.speakEnglish(modelAudioText || targetWord, { rate: 0.85 });
   };
 
   const handlePlayRecording = () => {
+    sounds.stopSpeech();
     if (engineState.recordedAudioUrl) {
       const audio = new Audio(engineState.recordedAudioUrl);
       audio.play().catch((e) => console.warn('Could not replay audio:', e));
     }
   };
 
+  const handleRetry = () => {
+    sounds.playClick();
+    sounds.stopSpeech();
+    hasTriggeredRef.current = false;
+    setHasSucceeded(false);
+    voiceEngineRef.current?.stopListening();
+  };
+
+  const handleAdvance = () => {
+    sounds.playClick();
+    sounds.stopSpeech();
+    onAdvance?.();
+  };
+
   return (
     <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4 py-2 font-serif">
+      {/* Option to listen to the model before recording */}
+      {!hasSucceeded && !engineState.isListening && (
+        <button
+          type="button"
+          onClick={handlePlayModel}
+          className="inline-flex items-center gap-1.5 text-xs font-serif font-semibold text-amber-200 hover:text-white bg-stone-900/90 hover:bg-stone-800 px-3.5 py-1.5 rounded-full border border-amber-600/40 transition shadow active:scale-95"
+        >
+          <Volume2 className="w-4 h-4 text-amber-400" />
+          <span>Écouter la prononciation du Maître</span>
+        </button>
+      )}
+
       {/* Interactive Medieval Runic Orb Button */}
       <div className="relative flex items-center justify-center">
         {/* Outer glowing runic ring */}
@@ -118,6 +157,8 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
           className={`absolute -inset-2 rounded-full transition-all duration-300 ${
             engineState.isListening
               ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 opacity-60 blur-md animate-pulse'
+              : hasSucceeded
+              ? 'bg-emerald-500/30 blur-md'
               : 'bg-amber-600/20 blur-sm'
           }`}
         />
@@ -184,19 +225,7 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
         </div>
       )}
 
-      {/* Audio Playback of what was recorded */}
-      {engineState.recordedAudioUrl && !engineState.isListening && (
-        <button
-          type="button"
-          onClick={handlePlayRecording}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 border border-amber-600/40 text-xs font-serif text-amber-200 hover:text-white transition shadow"
-        >
-          <Play className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-          <span>Réécouter mon enregistrement</span>
-        </button>
-      )}
-
-      {/* Direct Fallback Validation Button */}
+      {/* Direct Fallback Validation Button (before success) */}
       {!hasSucceeded && (
         <button
           type="button"
@@ -206,6 +235,66 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
           <Sparkles className="w-4 h-4 text-amber-400" />
           <span>J'ai prononcé à voix haute ! (Valider)</span>
         </button>
+      )}
+
+      {/* Post-Success Action Panel (Listening, Review & Controlled Advance) */}
+      {hasSucceeded && (
+        <div className="w-full space-y-3 p-4 rounded-2xl bg-stone-900/95 border border-emerald-500/50 shadow-2xl animate-fade-in text-center font-serif">
+          <div className="flex items-center justify-center gap-1.5 text-emerald-300 font-bold text-xs uppercase tracking-wider">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>Incantation validée !</span>
+          </div>
+
+          {/* Listening and comparison controls */}
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            {/* Listen to model */}
+            <button
+              type="button"
+              onClick={handlePlayModel}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-950 border border-amber-500/50 hover:border-amber-400 active:scale-95 text-xs font-serif font-semibold text-amber-200 hover:text-white transition shadow"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>Écouter le modèle</span>
+            </button>
+
+            {/* Replay student's own recording if available */}
+            {engineState.recordedAudioUrl && (
+              <button
+                type="button"
+                onClick={handlePlayRecording}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-950 border border-emerald-500/50 hover:border-emerald-400 active:scale-95 text-xs font-serif font-semibold text-emerald-300 hover:text-white transition shadow"
+              >
+                <Play className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400" />
+                <span>Réécouter mon enregistrement</span>
+              </button>
+            )}
+
+            {/* Re-record / Retry */}
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-stone-950 border border-stone-800 hover:border-stone-700 active:scale-95 text-xs font-serif text-stone-400 hover:text-stone-300 transition"
+              title="Recommencer l'enregistrement pour t'améliorer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-stone-400" />
+              <span>Réessayer</span>
+            </button>
+          </div>
+
+          {/* Next action button: User chooses when to advance! */}
+          {onAdvance && (
+            <div className="pt-2 border-t border-stone-800/80">
+              <button
+                type="button"
+                onClick={handleAdvance}
+                className="w-full py-3 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-95 text-stone-950 font-serif font-black text-xs sm:text-sm rounded-xl shadow-lg flex items-center justify-center gap-2 transition"
+              >
+                <span>{nextLabel || 'Continuer'}</span>
+                <ArrowRight className="w-4 h-4 text-stone-950" />
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
