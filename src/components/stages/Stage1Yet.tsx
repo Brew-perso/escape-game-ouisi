@@ -23,10 +23,14 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
   const currentSentence = sentences[Math.min(activeSentenceIndex, sentences.length - 1)] || sentences[0];
 
   const handleSuccessYet = () => {
-    sounds.stopSpeech();
     if (!completedSentences.includes(currentSentence.id)) {
       setCompletedSentences((prev) => [...prev, currentSentence.id]);
     }
+
+    // Automatically broadcast the transformed sentence with YET at the end!
+    setTimeout(() => {
+      sounds.speakEnglish(currentSentence.correctedSentence.replace('...', ', '), { rate: 0.85 });
+    }, 450);
   };
 
   const handleNextSentence = () => {
@@ -49,6 +53,9 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
       if (!manualSuccessSentences.includes(currentSentence.id)) {
         setManualSuccessSentences((prev) => [...prev, currentSentence.id]);
       }
+      setTimeout(() => {
+        sounds.speakEnglish(currentSentence.correctedSentence.replace('...', ', '), { rate: 0.85 });
+      }, 450);
     } else {
       sounds.playGentleError();
     }
@@ -148,7 +155,9 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
               key={`stage1-sentence-${currentSentence.id}`}
               targetWord="yet"
               targetDisplay="YET !"
-              modelAudioText={currentSentence.correctedSentence.replace('...', ',')}
+              modelAudioText="Yet !"
+              postSuccessAudioText={currentSentence.correctedSentence.replace('...', ', ')}
+              postSuccessAudioLabel="Réécouter la phrase avec YET"
               externalSuccess={manualSuccessSentences.includes(currentSentence.id)}
               onSuccess={handleSuccessYet}
               onAdvance={handleNextSentence}

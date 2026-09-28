@@ -8,6 +8,8 @@ interface InteractiveVoiceOrbProps {
   targetDisplay: string;
   modelAudioText?: string;
   modelAudioUrl?: string;
+  postSuccessAudioText?: string;
+  postSuccessAudioLabel?: string;
   externalSuccess?: boolean;
   onSuccess: () => void;
   onAdvance?: () => void;
@@ -20,6 +22,8 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   targetDisplay,
   modelAudioText,
   modelAudioUrl,
+  postSuccessAudioText,
+  postSuccessAudioLabel,
   externalSuccess,
   onSuccess,
   onAdvance,
@@ -114,6 +118,14 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   const handlePlayModel = () => {
     sounds.stopSpeech();
     sounds.speakEnglish(modelAudioText || targetWord, {
+      audioUrl: modelAudioUrl,
+      rate: 0.85,
+    });
+  };
+
+  const handlePlayPostSuccessModel = () => {
+    sounds.stopSpeech();
+    sounds.speakEnglish(postSuccessAudioText || modelAudioText || targetWord, {
       audioUrl: modelAudioUrl,
       rate: 0.85,
     });
@@ -252,14 +264,14 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
 
           {/* Listening and comparison controls */}
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-            {/* Listen to model */}
+            {/* Listen to model / transformed sentence */}
             <button
               type="button"
-              onClick={handlePlayModel}
+              onClick={handlePlayPostSuccessModel}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-950 border border-amber-500/50 hover:border-amber-400 active:scale-95 text-xs font-serif font-semibold text-amber-200 hover:text-white transition shadow"
             >
               <Volume2 className="w-3.5 h-3.5 text-amber-400" />
-              <span>Écouter le modèle</span>
+              <span>{postSuccessAudioLabel || 'Écouter le modèle'}</span>
             </button>
 
             {/* Replay student's own recording if available */}
