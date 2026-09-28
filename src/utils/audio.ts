@@ -52,6 +52,16 @@ class SoundManager {
     return this.preferredAccent;
   }
 
+  public stopSpeech() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   private initVoices() {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
@@ -294,8 +304,12 @@ class SoundManager {
   }
 
   // Text-To-Speech using native SpeechSynthesis API strictly with native English voice
-  public speakEnglish(text: string, options: { rate?: number; pitch?: number; lang?: string } = {}) {
+  public speakEnglish(
+    text: string,
+    options: { rate?: number; pitch?: number; lang?: string; onEnd?: () => void } = {}
+  ) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      options.onEnd?.();
       return;
     }
 
@@ -317,6 +331,11 @@ class SoundManager {
 
       utterance.rate = options.rate ?? 0.85; // pedagogical rate for L1 learners
       utterance.pitch = options.pitch ?? 1.0;
+
+      if (options.onEnd) {
+        utterance.onend = () => options.onEnd?.();
+        utterance.onerror = () => options.onEnd?.();
+      }
 
       window.speechSynthesis.speak(utterance);
     };

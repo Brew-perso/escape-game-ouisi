@@ -26,8 +26,6 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
     if (isAdvancingRef.current) return;
     isAdvancingRef.current = true;
 
-    sounds.playSuccess();
-
     if (!completedSentences.includes(currentSentence.id)) {
       setCompletedSentences((prev) => [...prev, currentSentence.id]);
     }
@@ -35,15 +33,21 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
     // Play text-to-speech for the transformed sentence
     sounds.speakEnglish(currentSentence.correctedSentence);
 
-    // Advance to next sentence with debounce lock
+    // Advance to next sentence with smooth debounce lock
     if (activeSentenceIndex < sentences.length - 1) {
       setTimeout(() => {
+        sounds.stopSpeech(); // Stop speech before next sentence starts so mic doesn't capture speaker audio!
         setActiveSentenceIndex((prev) => Math.min(prev + 1, sentences.length - 1));
         setTypedInput('');
-        isAdvancingRef.current = false;
-      }, 1400);
+        setTimeout(() => {
+          isAdvancingRef.current = false;
+        }, 400);
+      }, 1000);
     } else {
-      isAdvancingRef.current = false;
+      setTimeout(() => {
+        sounds.stopSpeech();
+        isAdvancingRef.current = false;
+      }, 600);
     }
   };
 
@@ -129,8 +133,14 @@ export const Stage1Yet: React.FC<Stage1Props> = ({ course, onComplete }) => {
               <Scroll className="w-3.5 h-3.5 text-amber-400" />
               <span>Malédiction à dissiper #{activeSentenceIndex + 1}</span>
             </span>
-            <div className="p-4 rounded-2xl bg-stone-950/80 border border-stone-800 text-stone-200 font-serif text-lg italic shadow-inner">
-              "{currentSentence.toxicSentence}"
+            <div
+              className={`p-4 rounded-2xl border text-lg italic shadow-inner transition-all duration-300 ${
+                completedSentences.includes(currentSentence.id)
+                  ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300 font-bold'
+                  : 'bg-stone-950/80 border-stone-800 text-stone-200 font-serif'
+              }`}
+            >
+              "{completedSentences.includes(currentSentence.id) ? currentSentence.correctedSentence : currentSentence.toxicSentence}"
             </div>
           </div>
 

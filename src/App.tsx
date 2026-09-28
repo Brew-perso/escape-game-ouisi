@@ -64,6 +64,7 @@ export const App: React.FC = () => {
   };
 
   const handleStageComplete = (digit: string, points: number) => {
+    sounds.stopSpeech();
     sounds.playVaultUnlock();
     setProgress((prev) => {
       const nextStageNum = Math.min(prev.currentStage + 1, 5);
@@ -85,6 +86,7 @@ export const App: React.FC = () => {
   };
 
   const handleSelectStage = (stageNum: number) => {
+    sounds.stopSpeech();
     setProgress((prev) => ({
       ...prev,
       currentStage: stageNum,
@@ -285,7 +287,7 @@ export const App: React.FC = () => {
           Guilde <strong className="text-amber-300">Oui-Si LEA Valence</strong> • Université Grenoble Alpes
         </p>
         <p className="text-[11px] text-stone-600 flex items-center justify-center gap-2">
-          <span>Version Grimoire v3.2</span>
+          <span>Version Grimoire v3.3</span>
           <span>•</span>
           <button
             onClick={() => {

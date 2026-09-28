@@ -25,6 +25,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
   };
 
   const handlePlayRhythmComparison = (pattern: 'LA-la' | 'la-LA') => {
+    sounds.stopSpeech();
     if (pattern === 'LA-la') {
       sounds.playBeat(true);
       setTimeout(() => sounds.playBeat(false), 240);
@@ -35,6 +36,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
   };
 
   const handleSyllableClick = (idx: number) => {
+    sounds.stopSpeech();
     setSelectedSyllableIdx(idx);
     setStretchingIndex(idx);
     sounds.playRubberStretch(idx === currentWord.stressedIndex ? 1.2 : 0.8);
@@ -63,6 +65,7 @@ export const Stage3Rhythm: React.FC<Stage3Props> = ({ course, onComplete }) => {
   };
 
   const handleNextWord = () => {
+    sounds.stopSpeech();
     setSelectedSyllableIdx(null);
     setFeedback(null);
     setActiveHintLevel(0);

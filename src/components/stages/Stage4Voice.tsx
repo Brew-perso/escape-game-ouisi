@@ -23,19 +23,22 @@ export const Stage4Voice: React.FC<Stage4Props> = ({ course, onComplete }) => {
     if (isAdvancingRef.current) return;
     isAdvancingRef.current = true;
 
-    sounds.playSuccess();
+    // Stop any model pronunciation immediately so it cannot bleed into the next challenge
+    sounds.stopSpeech();
 
     if (!completedChallenges.includes(currentChallenge.id)) {
       setCompletedChallenges((prev) => [...prev, currentChallenge.id]);
     }
 
     if (challengeIdx < challenges.length - 1) {
+      setChallengeIdx((prev) => Math.min(prev + 1, challenges.length - 1));
       setTimeout(() => {
-        setChallengeIdx((prev) => Math.min(prev + 1, challenges.length - 1));
         isAdvancingRef.current = false;
-      }, 1400);
+      }, 400);
     } else {
-      isAdvancingRef.current = false;
+      setTimeout(() => {
+        isAdvancingRef.current = false;
+      }, 400);
     }
   };
 

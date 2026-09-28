@@ -1,5 +1,5 @@
 // Bulletproof Web Audio & Acoustic Voice Engine for Mobile Browsers (including Android Xiaomi/Poco)
-import { getSharedAudioContext } from './audio';
+import { getSharedAudioContext, sounds } from './audio';
 
 export interface VoiceEngineState {
   isListening: boolean;
@@ -25,7 +25,7 @@ export class VoiceEngine {
   private lastStateUpdateTimestamp: number = 0;
   private accumulatedSpeechMs: number = 0;
   private onStateChange: (state: VoiceEngineState) => void;
-  private requiredSpeechMs: number = 260; // 260ms of continuous vocal energy
+  private requiredSpeechMs: number = 340; // 340ms of sustained vocal presence
   private isProcessingSuccess: boolean = false;
 
   private state: VoiceEngineState = {
@@ -50,6 +50,9 @@ export class VoiceEngine {
 
   // Must be called directly on user touch/click to unlock mobile AudioContext
   public async startListening(_targetWords: string[] = ['yet']) {
+    // Stop any playing speech immediately so microphone doesn't capture speaker audio
+    sounds.stopSpeech();
+
     if (this.state.isListening) {
       this.stopListening();
     }
@@ -57,8 +60,6 @@ export class VoiceEngine {
     this.audioChunks = [];
     this.accumulatedSpeechMs = 0;
     this.isProcessingSuccess = false;
-    this.listeningStartTimestamp = performance.now();
-    this.lastFrameTimestamp = performance.now();
     this.lastStateUpdateTimestamp = 0;
 
     this.updateState({
@@ -180,6 +181,11 @@ export class VoiceEngine {
     const freqBuffer = new Uint8Array(this.analyser.frequencyBinCount);
     const timeBuffer = new Uint8Array(this.analyser.fftSize);
 
+    // Record the actual audio stream start timestamp when audio frames begin arriving
+    this.listeningStartTimestamp = performance.now();
+    this.lastFrameTimestamp = performance.now();
+    this.accumulatedSpeechMs = 0;
+
     const check = () => {
       if (!this.analyser || !this.state.isListening || this.isProcessingSuccess) return;
 
@@ -214,12 +220,17 @@ export class VoiceEngine {
 
       const currentVolume = Math.max(freqVolume, peakVolume);
 
-      // Warmup guard: Ignore first 350ms of audio to discard button tap click and hardware mic pop
+      // Warmup guard: Ignore first 450ms of stream audio to discard button tap click, screen touch, and hardware mic pop
       const timeSinceStart = now - this.listeningStartTimestamp;
-      if (timeSinceStart > 350) {
-        // Voice activity threshold: Real spoken voice in front of phone is >= 25%
-        // Ambient background noise/silence is < 15%
-        if (currentVolume >= 25) {
+      if (timeSinceStart <= 450) {
+        this.accumulatedSpeechMs = 0;
+      } else {
+        // Voice activity threshold:
+        // Genuine vocal speech produces energy in the vocal frequency band (freqVolume >= 18)
+        // and overall audio level (currentVolume >= 28)
+        const isVoiceActive = freqVolume >= 18 && currentVolume >= 28;
+
+        if (isVoiceActive) {
           this.accumulatedSpeechMs += deltaMs;
 
           if (this.accumulatedSpeechMs >= this.requiredSpeechMs && !this.isProcessingSuccess) {
@@ -227,9 +238,9 @@ export class VoiceEngine {
             return;
           }
         } else {
-          // Pause decay
+          // Pause decay: fast decay during non-vocal periods so room noise doesn't accumulate
           if (this.accumulatedSpeechMs > 0) {
-            this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - deltaMs * 0.4);
+            this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - deltaMs * 0.8);
           }
         }
       }
@@ -267,20 +278,20 @@ export class VoiceEngine {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       try {
         this.mediaRecorder.stop();
-      } catch (e) {}
+      } catch {}
     }
 
     if (this.mediaStream) {
       try {
         this.mediaStream.getTracks().forEach((t) => t.stop());
-      } catch (e) {}
+      } catch {}
       this.mediaStream = null;
     }
 
     if (this.dummyGain) {
       try {
         this.dummyGain.disconnect();
-      } catch (e) {}
+      } catch {}
       this.dummyGain = null;
     }
 
@@ -294,24 +305,25 @@ export class VoiceEngine {
     }
 
     this.isProcessingSuccess = false;
+    this.accumulatedSpeechMs = 0;
 
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       try {
         this.mediaRecorder.stop();
-      } catch (e) {}
+      } catch {}
     }
 
     if (this.mediaStream) {
       try {
         this.mediaStream.getTracks().forEach((t) => t.stop());
-      } catch (e) {}
+      } catch {}
       this.mediaStream = null;
     }
 
     if (this.dummyGain) {
       try {
         this.dummyGain.disconnect();
-      } catch (e) {}
+      } catch {}
       this.dummyGain = null;
     }
 

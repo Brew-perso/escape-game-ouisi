@@ -28,31 +28,47 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
 
   const [hasSucceeded, setHasSucceeded] = useState(false);
   const hasTriggeredRef = useRef(false);
+  const mountCooldownRef = useRef(false);
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceEngineRef = useRef<VoiceEngine | null>(null);
   const onSuccessRef = useRef(onSuccess);
-  onSuccessRef.current = onSuccess;
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
 
   useEffect(() => {
     hasTriggeredRef.current = false;
+    mountCooldownRef.current = false;
     setHasSucceeded(false);
+
+    // 350ms mount guard: discard any touch/click event queued from previous question
+    const mountTimer = setTimeout(() => {
+      mountCooldownRef.current = true;
+    }, 350);
 
     voiceEngineRef.current = new VoiceEngine((newState) => {
       setEngineState(newState);
 
       // Single-shot trigger protection: can NEVER trigger twice
-      if (newState.voiceDetected && !hasTriggeredRef.current) {
+      if (newState.voiceDetected && !hasTriggeredRef.current && mountCooldownRef.current) {
         hasTriggeredRef.current = true;
         setHasSucceeded(true);
         sounds.playSuccess();
 
-        // Advance cleanly after victory animation
-        setTimeout(() => {
+        // Advance cleanly after victory animation (~850ms)
+        advanceTimerRef.current = setTimeout(() => {
           onSuccessRef.current();
-        }, 1200);
+        }, 850);
       }
     });
 
     return () => {
+      clearTimeout(mountTimer);
+      if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+        advanceTimerRef.current = null;
+      }
       if (voiceEngineRef.current) {
         voiceEngineRef.current.stopListening();
         voiceEngineRef.current = null;
@@ -61,7 +77,7 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   }, [targetWord]);
 
   const handleOrbClick = async () => {
-    if (hasTriggeredRef.current || hasSucceeded) return;
+    if (!mountCooldownRef.current || hasTriggeredRef.current || hasSucceeded) return;
 
     sounds.playClick();
     if (engineState.isListening) {
@@ -72,15 +88,18 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
   };
 
   const handleManualValidation = () => {
-    if (hasTriggeredRef.current || hasSucceeded) return;
+    if (!mountCooldownRef.current || hasTriggeredRef.current || hasSucceeded) return;
     hasTriggeredRef.current = true;
 
-    sounds.playClick();
+    sounds.playSuccess();
     setHasSucceeded(true);
     if (voiceEngineRef.current) {
       voiceEngineRef.current.stopListening();
     }
-    onSuccessRef.current();
+    // Clean delay so user sees "Sceau Brisé !" rather than an instant 0ms skip
+    advanceTimerRef.current = setTimeout(() => {
+      onSuccessRef.current();
+    }, 650);
   };
 
   const handlePlayRecording = () => {
