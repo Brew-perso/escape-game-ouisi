@@ -13,7 +13,8 @@ import { ResetConfirmModal } from './components/ResetConfirmModal';
 import { MicrophoneDiagnosticModal } from './components/MicrophoneDiagnosticModal';
 import { InstallPrompt } from './components/InstallPrompt';
 import { sounds } from './utils/audio';
-import { Play, MapPin, KeyRound } from 'lucide-react';
+import { Play, MapPin, KeyRound, GitCommit } from 'lucide-react';
+import { APP_VERSION, COMMIT_HASH, COMMIT_DATE, GITHUB_REPO_URL } from './config/version';
 
 const STORAGE_KEY = 'ouisi_quest_progress_v1';
 
@@ -286,8 +287,26 @@ export const App: React.FC = () => {
         <p>
           Guilde <strong className="text-amber-300">Oui-Si LEA Valence</strong> • Université Grenoble Alpes
         </p>
-        <p className="text-[11px] text-stone-600 flex items-center justify-center gap-2">
-          <span>Version Grimoire v3.3</span>
+        <p className="text-[11px] text-stone-600 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+          <span className="inline-flex items-center gap-1.5">
+            <span>Version Grimoire {APP_VERSION}</span>
+            {COMMIT_HASH && (
+              <span className="inline-flex items-center gap-1 text-stone-500">
+                <span>(</span>
+                <GitCommit className="w-3 h-3 text-amber-500/70 shrink-0" />
+                <a
+                  href={`${GITHUB_REPO_URL}/commit/${COMMIT_HASH}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-amber-400/80 hover:text-amber-300 transition underline underline-offset-2"
+                  title={`Dernier commit : ${COMMIT_HASH}${COMMIT_DATE ? ` (${COMMIT_DATE})` : ''} — Voir sur GitHub`}
+                >
+                  {COMMIT_HASH}
+                </a>
+                <span>)</span>
+              </span>
+            )}
+          </span>
           <span>•</span>
           <button
             onClick={() => {
