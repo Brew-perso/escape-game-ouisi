@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ouisi-grimoire-v3.3.3';
+const CACHE_NAME = 'ouisi-grimoire-v3.3.4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -7,6 +7,7 @@ const STATIC_ASSETS = [
   '/icons/icon-512.png',
   '/icons/icon-512-maskable.png',
   '/audio/employee.mp3',
+  '/audio/employee0205.mp3',
   '/audio/employer.mp3',
 ];
 
