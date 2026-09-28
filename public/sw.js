@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ouisi-grimoire-v3.3.5';
+const CACHE_NAME = 'ouisi-grimoire-v3.3.6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

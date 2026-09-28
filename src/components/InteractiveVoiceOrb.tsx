@@ -97,7 +97,11 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
 
     sounds.playClick();
     if (engineState.isListening) {
-      voiceEngineRef.current?.stopListening();
+      if (voiceEngineRef.current?.hasDetectedSpeech()) {
+        voiceEngineRef.current.triggerManualFinish();
+      } else {
+        voiceEngineRef.current?.stopListening();
+      }
     } else {
       await voiceEngineRef.current?.startListening([targetWord, 'yet', 'pas encore']);
     }
@@ -199,7 +203,13 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
           )}
 
           <span className="text-[10px] sm:text-xs font-serif uppercase tracking-widest font-bold">
-            {hasSucceeded ? 'Sceau Brisé !' : engineState.isListening ? 'À l\'écoute' : 'Prononcer'}
+            {hasSucceeded
+              ? 'Sceau Brisé !'
+              : engineState.isListening
+              ? engineState.spokenDurationMs >= 200
+                ? 'Terminer ⏹️'
+                : 'À l\'écoute'
+              : 'Prononcer'}
           </span>
         </button>
       </div>
@@ -225,10 +235,14 @@ export const InteractiveVoiceOrb: React.FC<InteractiveVoiceOrbProps> = ({
           </div>
 
           <p className="text-[11px] text-stone-300 font-serif italic">
-            {engineState.volume >= 25 ? (
-              <span className="text-emerald-300 font-bold">🔥 Voix reçue ! Continue...</span>
+            {engineState.spokenDurationMs >= 200 ? (
+              <span className="text-emerald-300 font-bold">
+                🔥 Voix captée ! Termine ta phrase (pause naturelle ou touche l'orbe).
+              </span>
+            ) : engineState.volume >= 25 ? (
+              <span className="text-amber-300 font-bold">🎙️ Voix détectée... parle distinctement !</span>
             ) : (
-              <>Parle fort et distinctement : <strong className="text-amber-300">{targetDisplay}</strong> !</>
+              <>Prononce : <strong className="text-amber-300">{targetDisplay}</strong> !</>
             )}
           </p>
         </div>

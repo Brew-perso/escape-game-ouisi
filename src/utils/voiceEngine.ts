@@ -24,8 +24,12 @@ export class VoiceEngine {
   private lastFrameTimestamp: number = 0;
   private lastStateUpdateTimestamp: number = 0;
   private accumulatedSpeechMs: number = 0;
+  private consecutiveSilenceMs: number = 0;
+  private hasSpokenEnough: boolean = false;
+  private minRequiredSpeechMs: number = 300;
+  private silenceThresholdMs: number = 750;
+  private maxDurationMs: number = 7000;
   private onStateChange: (state: VoiceEngineState) => void;
-  private requiredSpeechMs: number = 340; // 340ms of sustained vocal presence
   private isProcessingSuccess: boolean = false;
 
   private state: VoiceEngineState = {
@@ -49,7 +53,7 @@ export class VoiceEngine {
   }
 
   // Must be called directly on user touch/click to unlock mobile AudioContext
-  public async startListening(_targetWords: string[] = ['yet']) {
+  public async startListening(targetWords: string[] = ['yet']) {
     // Stop any playing speech immediately so microphone doesn't capture speaker audio
     sounds.stopSpeech();
 
@@ -57,8 +61,31 @@ export class VoiceEngine {
       this.stopListening();
     }
 
+    const mainTarget = (targetWords[0] || '').toLowerCase().trim();
+    const wordCount = mainTarget.split(/\s+/).filter(Boolean).length;
+
+    // Adapt required speech and silence threshold dynamically based on target phrase length
+    if (wordCount >= 4 || mainTarget.length >= 18) {
+      // Long sentence (e.g. "I do not know it yet, but I will")
+      this.minRequiredSpeechMs = 700;
+      this.silenceThresholdMs = 850;
+      this.maxDurationMs = 9000;
+    } else if (wordCount >= 2 || mainTarget.length >= 7) {
+      // Multi-syllable word (e.g. "employee")
+      this.minRequiredSpeechMs = 380;
+      this.silenceThresholdMs = 750;
+      this.maxDurationMs = 6000;
+    } else {
+      // Short word (e.g. "yet")
+      this.minRequiredSpeechMs = 240;
+      this.silenceThresholdMs = 650;
+      this.maxDurationMs = 4500;
+    }
+
     this.audioChunks = [];
     this.accumulatedSpeechMs = 0;
+    this.consecutiveSilenceMs = 0;
+    this.hasSpokenEnough = false;
     this.isProcessingSuccess = false;
     this.lastStateUpdateTimestamp = 0;
 
@@ -185,6 +212,8 @@ export class VoiceEngine {
     this.listeningStartTimestamp = performance.now();
     this.lastFrameTimestamp = performance.now();
     this.accumulatedSpeechMs = 0;
+    this.consecutiveSilenceMs = 0;
+    this.hasSpokenEnough = false;
 
     const check = () => {
       if (!this.analyser || !this.state.isListening || this.isProcessingSuccess) return;
@@ -220,27 +249,51 @@ export class VoiceEngine {
 
       const currentVolume = Math.max(freqVolume, peakVolume);
 
-      // Warmup guard: Ignore first 450ms of stream audio to discard button tap click, screen touch, and hardware mic pop
+      // Warmup guard: Ignore first 350ms of stream audio to discard button tap click, screen touch, and hardware mic pop
       const timeSinceStart = now - this.listeningStartTimestamp;
-      if (timeSinceStart <= 450) {
+      if (timeSinceStart <= 350) {
         this.accumulatedSpeechMs = 0;
+        this.consecutiveSilenceMs = 0;
       } else {
         // Voice activity threshold:
-        // Genuine vocal speech produces energy in the vocal frequency band (freqVolume >= 18)
-        // and overall audio level (currentVolume >= 28)
-        const isVoiceActive = freqVolume >= 18 && currentVolume >= 28;
+        // Genuine vocal speech produces energy in the vocal frequency band (freqVolume >= 17)
+        // and overall audio level (currentVolume >= 26)
+        const isVoiceActive = freqVolume >= 17 && currentVolume >= 26;
 
         if (isVoiceActive) {
           this.accumulatedSpeechMs += deltaMs;
+          this.consecutiveSilenceMs = 0; // Reset silence while speaking!
 
-          if (this.accumulatedSpeechMs >= this.requiredSpeechMs && !this.isProcessingSuccess) {
-            this.triggerSuccess();
-            return;
+          if (this.accumulatedSpeechMs >= this.minRequiredSpeechMs) {
+            this.hasSpokenEnough = true;
           }
         } else {
-          // Pause decay: fast decay during non-vocal periods so room noise doesn't accumulate
-          if (this.accumulatedSpeechMs > 0) {
-            this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - deltaMs * 0.8);
+          // Pause / silence period
+          if (this.hasSpokenEnough) {
+            this.consecutiveSilenceMs += deltaMs;
+
+            // When user pauses for silenceThresholdMs AFTER having spoken the phrase,
+            // they have finished their utterance!
+            if (this.consecutiveSilenceMs >= this.silenceThresholdMs && !this.isProcessingSuccess) {
+              this.triggerSuccess();
+              return;
+            }
+          } else {
+            // User hasn't reached minimum speech yet: slight decay of noise
+            if (this.accumulatedSpeechMs > 0) {
+              this.accumulatedSpeechMs = Math.max(0, this.accumulatedSpeechMs - deltaMs * 0.5);
+            }
+          }
+        }
+
+        // Safety timeout: if recording reached maxDuration and user has spoken enough
+        if (timeSinceStart >= this.maxDurationMs && !this.isProcessingSuccess) {
+          if (this.hasSpokenEnough) {
+            this.triggerSuccess();
+            return;
+          } else {
+            this.stopListening();
+            return;
           }
         }
       }
@@ -277,6 +330,9 @@ export class VoiceEngine {
 
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       try {
+        if (typeof this.mediaRecorder.requestData === 'function') {
+          this.mediaRecorder.requestData();
+        }
         this.mediaRecorder.stop();
       } catch {}
     }
@@ -296,6 +352,16 @@ export class VoiceEngine {
     }
 
     this.analyser = null;
+  }
+
+  public hasDetectedSpeech(): boolean {
+    return this.hasSpokenEnough || this.accumulatedSpeechMs >= 200;
+  }
+
+  public triggerManualFinish() {
+    if (!this.isProcessingSuccess && this.state.isListening) {
+      this.triggerSuccess();
+    }
   }
 
   public stopListening() {
